@@ -26,7 +26,8 @@
     #report-table th { background: #0d6efd; color: white; font-size: 18px; padding: 12px; border: 1px solid #0b5ed7; text-transform: uppercase; }
     #report-table td { border: 1px solid #ccc; padding: 12px; font-size: 20px; text-align: center; }
 
-    .rpt-productivity-box { margin-top: auto; border-top: 3px solid #0d6efd; padding-top: 20px; font-size: 28px; color: #000; font-weight: bold; }
+    .rpt-productivity-box { margin-top: auto; border-top: 3px solid #0d6efd; padding-top: 20px; font-size: 28px; color: #000; }
+    .sup-signature { text-align: right; margin-top: 30px; font-size: 32px; font-weight: bold; }
   </style>
 </head>
 <body>
@@ -101,10 +102,15 @@
       <div id="entries-list" class="mb-3"></div>
 
       <div id="final-manpower-section" class="border-top pt-3 hidden">
-        <label class="fw-bold mb-2">Final Manpower Details</label>
-        <div class="row g-2 mb-3">
-            <div class="col-6"><input type="number" id="final-scaff" class="form-control" placeholder="Total Scaffolders"></div>
-            <div class="col-6"><input type="number" id="final-help" class="form-control" placeholder="Total Helpers"></div>
+        <label class="fw-bold mb-2">Final Manpower & Hours</label>
+        <div class="row g-2 mb-2">
+            <div class="col-4"><input type="number" id="final-scaff" class="form-control" placeholder="Scaff."></div>
+            <div class="col-4"><input type="number" id="final-help" class="form-control" placeholder="Help."></div>
+            <div class="col-4"><input type="number" id="final-sup-count" class="form-control" placeholder="Sup."></div>
+        </div>
+        <div class="mb-3">
+            <label class="small text-muted">Today Working Hours (e.g. 8 or 9)</label>
+            <input type="number" id="working-hours" class="form-control" value="9">
         </div>
         <button id="btn-submit" onclick="submitFinal()" class="btn btn-success btn-custom">Submit & Download Report</button>
       </div>
@@ -128,7 +134,6 @@
   <div id="report-capture">
     <div class="rpt-header"><h1>Job Completion Report</h1></div>
     <div class="rpt-meta">
-      <div><strong>Supervisor:</strong> <span id="rpt-sup"></span></div>
       <div><strong>Date:</strong> <span id="rpt-date"></span></div>
     </div>
     <table id="report-table">
@@ -139,7 +144,12 @@
       </thead>
       <tbody id="rpt-body"></tbody>
     </table>
+    
     <div id="rpt-productivity-area" class="rpt-productivity-box"></div>
+    
+    <div class="sup-signature">
+        Supervisor Name: <span id="rpt-sup-name"></span>
+    </div>
   </div>
 </div>
 
@@ -197,13 +207,18 @@
   }
 
   function submitFinal() {
-    const scaff = parseInt(document.getElementById('final-scaff').value) || 0;
-    const help = parseInt(document.getElementById('final-help').value) || 0;
-    if(scaff + help === 0) { alert("Please enter total manpower."); return; }
+    const sC = parseInt(document.getElementById('final-scaff').value) || 0;
+    const hC = parseInt(document.getElementById('final-help').value) || 0;
+    const spC = parseInt(document.getElementById('final-sup-count').value) || 0;
+    const hrs = parseFloat(document.getElementById('working-hours').value) || 9;
+
+    if(sC + hC === 0) { alert("Please enter manpower."); return; }
+
     document.getElementById('loading').classList.remove('hidden');
-    const finalData = jobEntries.map(entry => ({...entry, scaffolders: scaff, helpers: help, supervisorName: currentSupervisor}));
+    const finalData = jobEntries.map(entry => ({...entry, scaffolders: sC, helpers: hC, supervisors: spC, workHrs: hrs, supervisorName: currentSupervisor}));
+    
     fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(finalData) }).then(r => r.json()).then(() => {
-        const stats = calculateProductivity(scaff, help);
+        const stats = calculateProductivity(sC, hC, spC, hrs);
         generateImage(stats);
         document.getElementById('view-form').classList.add('hidden');
         document.getElementById('view-success').classList.remove('hidden');
@@ -211,7 +226,7 @@
     });
   }
 
-  function calculateProductivity(scaff, help) {
+  function calculateProductivity(s, h, sp, hrs) {
     let totalE = 0, totalD = 0;
     jobEntries.forEach(j => {
       const vol = (parseFloat(j.L) * parseFloat(j.W) * parseFloat(j.H) * parseFloat(j.Nos));
@@ -219,20 +234,20 @@
       else if(j.jobType === 'Dismantling') totalD += vol;
     });
 
-    const totalManpower = scaff + help;
+    const totalManpower = s + h + sp;
     const totalVolume = totalE + totalD;
-    const totalManHours = totalManpower * 9;
+    const totalManHours = totalManpower * hrs;
     const prod = totalManHours > 0 ? (totalVolume / totalManHours) : 0;
 
-    reportText = `Date: ${jobEntries[0].date}\nSupervisor Name: ${currentSupervisor}\n\nSCAFFOLDERS: ${scaff}\nHELPERS: ${help}\nTOTAL MANPOWER: ${totalManpower}\nTOTAL ERECTION: ${totalE.toFixed(2)}\nTOTAL DISMANTLING: ${totalD.toFixed(2)}\nTOTAL VOLUME: ${totalVolume.toFixed(2)}\nTOTAL MANHOURS: ${totalManHours}\nPRODUCTIVITY: ${prod.toFixed(1)} m³/hr`;
+    reportText = `Date: ${jobEntries[0].date}\nSupervisor: ${currentSupervisor}\n\nSCAFFOLDERS: ${s}\nHELPERS: ${h}\nSUPERVISORS: ${sp}\nTOTAL MANPOWER: ${totalManpower}\nWORKING HOURS: ${hrs}\nTOTAL VOLUME: ${totalVolume.toFixed(2)}\nTOTAL MANHOURS: ${totalManHours.toFixed(1)}\nPRODUCTIVITY: ${prod.toFixed(1)} m³/hr`;
     
     document.getElementById('summary-text').value = reportText;
-    return { totalE, totalD, totalVolume, totalManpower, totalManHours, prod, scaff, help };
+    return { totalE, totalD, totalVolume, totalManpower, totalManHours, prod, s, h, sp, hrs };
   }
 
-  function generateImage(s) {
-    document.getElementById('rpt-sup').innerText = currentSupervisor;
+  function generateImage(st) {
     document.getElementById('rpt-date').innerText = jobEntries[0].date;
+    document.getElementById('rpt-sup-name').innerText = currentSupervisor;
     const body = document.getElementById('rpt-body');
     body.innerHTML = jobEntries.map((j, i) => {
         const v = (parseFloat(j.L) * parseFloat(j.W) * parseFloat(j.H) * parseFloat(j.Nos)).toFixed(2);
@@ -240,18 +255,18 @@
     }).join('');
     
     document.getElementById('rpt-productivity-area').innerHTML = `
-        <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 15px; font-size: 24px;">
-            <div>SCAFFOLDERS: ${s.scaff}</div>
-            <div>HELPERS: ${s.help}</div>
-            <div>SUPERVISOR: ${currentSupervisor}</div>
+        <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 20px; font-weight:bold; font-size: 30px;">
+            <div>Scaffolders- ${st.s}</div>
+            <div>Helpers- ${st.h}</div>
+            <div>Supervisor- ${st.sp}</div>
         </div>
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px; border-top: 1px dashed #ccc; padding-top:15px;">
-            <div>TOTAL MANPOWER: ${s.totalManpower}</div>
-            <div>TOTAL ERECTION: ${s.totalE.toFixed(2)}</div>
-            <div>TOTAL DISMANTLING: ${s.totalD.toFixed(2)}</div>
-            <div>TOTAL VOLUME: ${s.totalVolume.toFixed(2)}</div>
-            <div>TOTAL MANHOURS: ${s.totalManHours}</div>
-            <div style="color:#0d6efd;">PRODUCTIVITY: ${s.prod.toFixed(1)} m³/hr</div>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px; border-top: 2px solid #333; padding-top:15px; font-size: 26px;">
+            <div>TOTAL ERECTION: ${st.totalE.toFixed(2)}</div>
+            <div>TOTAL DISMANTLING: ${st.totalD.toFixed(2)}</div>
+            <div>TOTAL VOLUME: ${st.totalVolume.toFixed(2)}</div>
+            <div>WORKING HOURS: ${st.hrs}</div>
+            <div>TOTAL MANHOURS: ${st.totalManHours.toFixed(1)}</div>
+            <div style="color:#0d6efd; font-weight:bold;">PRODUCTIVITY: ${st.prod.toFixed(1)} m³/hr</div>
         </div>
     `;
 

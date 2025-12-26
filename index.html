@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Worker Check-in</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        body { background-color: #f0f2f5; padding: 10px; font-family: sans-serif; }
+        #captureArea { background: white; padding: 15px; border-radius: 15px; }
+        .card { border: none; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 450px; margin: auto; }
+        .hidden { display: none; }
+        .list-group-item { font-size: 0.85rem; border-left: 5px solid #0d6efd; margin-bottom: 5px; }
+        .loading-text { font-size: 0.9rem; color: #555; }
+    </style>
+</head>
+<body>
+
+<div class="card p-4 mt-3">
+    <div id="captureArea">
+        <h5 class="text-center fw-bold mb-4 text-primary">ATTENDANCE SYSTEM</h5>
+        
+        <div id="loader" class="text-center mb-3 loading-text">Syncing with Cloud...</div>
+
+        <div id="loginSec" class="hidden">
+            <label class="small fw-bold">Supervisor</label>
+            <select id="userDrop" class="form-select mb-2"></select>
+            <input type="password" id="passcode" class="form-control mb-3" placeholder="Passcode">
+            <button class="btn btn-primary w-100" onclick="handleLogin()">Login</button>
+        </div>
+
+        <div id="mainSec" class="hidden">
+            <div class="mb-3">
+                <label class="small fw-bold text-muted">Date</label>
+                <input type="date" id="attDate" class="form-control form-control-sm">
+            </div>
+            
+            <label class="small fw-bold text-muted">Area</label>
+            <select id="areaDrop" class="form-select mb-3"></select>
+
+            <div id="inputControls">
+                <label class="small fw-bold text-muted">Search Worker</label>
+                <input type="text" id="workerSearch" class="form-control mb-2" placeholder="Search name/ID..." oninput="filterWorkers()">
+                <select id="workerDrop" class="form-select mb-2" size="4"></select>
+                <button class="btn btn-outline-primary btn-sm w-100 mb-3" onclick="addWorkerToList()">+ Add to List</button>
+            </div>
+
+            <h6 class="small fw-bold">Checked-in List:</h6>
+            <ul id="checkinList" class="list-group mb-3 p-0"></ul>
+        </div>
+    </div> <div id="actionButtons" class="hidden">
+        <button class="btn btn-success w-100 mb-2" id="subBtn" onclick="finalSubmit()">Submit, Download & Share</button>
+    </div>
+</div>
+
+<script>
+    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwoUO7cyEColEfR55Ey0xry85eOACl3knYpewwceRYEKdcqjxqIsaTfxAfEg0JTSTXX/exec";
+    let db = { users: [], areas: [], workers: [] };
+    let tempWorkers = [];
+
+    window.onload = () => {
+        document.getElementById('attDate').valueAsDate = new Date();
+        fetch(WEB_APP_URL, { method: "POST", body: JSON.stringify({ action: "getData" }) })
+        .then(res => res.json()).then(data => {
+            db = data;
+            const uD = document.getElementById('userDrop');
+            db.users.forEach(u => uD.innerHTML += `<option value="${u.user}">${u.user}</option>`);
+            const aD = document.getElementById('areaDrop');
+            db.areas.forEach(a => aD.innerHTML += `<option value="${a}">${a}</option>`);
+            filterWorkers();
+            document.getElementById('loader').classList.add('hidden');
+            document.getElementById('loginSec').classList.remove('hidden');
+        });
+    };
+
+    function filterWorkers() {
+        const search = document.getElementById('workerSearch').value.toLowerCase();
+        const drop = document.getElementById('workerDrop');
+        drop.innerHTML = "";
+        const filtered = db.workers.filter(w => w.name.toLowerCase().includes(search) || w.code.toLowerCase().includes(search));
+        filtered.forEach(w => drop.innerHTML += `<option value="${w.code}">${w.name} (${w.code})</option>`);
+    }
+
+    function handleLogin() {
+        const u = document.getElementById('userDrop').value;
+        const p = document.getElementById('passcode').value;
+        if(db.users.find(x => x.user === u && x.pass === p)) {
+            document.getElementById('loginSec').classList.add('hidden');
+            document.getElementById('mainSec').classList.remove('hidden');
+            document.getElementById('actionButtons').classList.remove('hidden');
+        } else { alert("Wrong Passcode"); }
+    }
+
+    function addWorkerToList() {
+        const sel = document.getElementById('workerDrop');
+        if (sel.selectedIndex === -1) return;
+        const worker = db.workers.find(w => w.code === sel.value);
+        if(!tempWorkers.some(w => w.code === worker.code)) {
+            tempWorkers.push(worker);
+            renderList();
+        }
+    }
+
+    function renderList() {
+        const list = document.getElementById('checkinList');
+        list.innerHTML = tempWorkers.map((w, i) => `
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                <span>${i+1}. ${w.name} (${w.code})</span>
+                <span class="text-danger fw-bold no-capture" style="cursor:pointer" onclick="removeWorker(${i})">✕</span>
+            </li>`).join('');
+    }
+
+    function removeWorker(i) { tempWorkers.splice(i, 1); renderList(); }
+
+    async function finalSubmit() {
+        if(tempWorkers.length === 0) return alert("List is empty");
+        const btn = document.getElementById('subBtn');
+        btn.disabled = true;
+        btn.innerText = "Processing...";
+
+        const payload = {
+            action: "submit",
+            data: {
+                date: document.getElementById('attDate').value,
+                supervisor: document.getElementById('userDrop').value,
+                area: document.getElementById('areaDrop').value,
+                workers: tempWorkers
+            }
+        };
+
+        // 1. Submit to Google Sheets
+        await fetch(WEB_APP_URL, { method: "POST", mode: "no-cors", body: JSON.stringify(payload) });
+
+        // 2. Hide UI elements for JPEG capture
+        document.getElementById('inputControls').classList.add('hidden');
+        const items = document.querySelectorAll('.no-capture');
+        items.forEach(el => el.style.display = 'none');
+
+        // 3. Download JPEG
+        const captureArea = document.getElementById('captureArea');
+        html2canvas(captureArea).then(canvas => {
+            const link = document.createElement('a');
+            link.download = `Attendance_${payload.data.date}.jpg`;
+            link.href = canvas.toDataURL("image/jpeg", 0.9);
+            link.click();
+            
+            // 4. Share WhatsApp
+            generateShareLink(payload.data);
+        });
+    }
+
+    function generateShareLink(data) {
+        let report = `*CHECK IN REPORT*\nDate: ${data.date}\nSupervisor: ${data.supervisor}\nArea: ${data.area}\n\n`;
+        data.workers.forEach((w, i) => {
+            report += `${i + 1}. ${w.name} (${w.code}) [${w.oracle}]\n`;
+        });
+        const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(report)}`;
+        window.open(waUrl, '_blank');
+        setTimeout(() => location.reload(), 1000);
+    }
+</script>
+</body>
+</html>

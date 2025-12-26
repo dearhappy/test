@@ -16,7 +16,6 @@
     
     #loading { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.8); z-index:9999; display:flex; align-items:center; justify-content:center; }
     
-    /* A5 Landscape High-Res Container */
     #offscreen-report-container { position: absolute; left: -9999px; top: 0; }
     #report-capture { width: 2100px; min-height: 1485px; background: white; padding: 60px; box-sizing: border-box; font-family: Arial; display: flex; flex-direction: column; }
     .rpt-header { text-align: center; border-bottom: 4px solid #0d6efd; margin-bottom: 30px; padding-bottom: 10px; }
@@ -95,10 +94,12 @@
   <div id="view-success" class="card card-custom hidden text-center">
     <div class="card-body p-4">
       <h3 class="text-success">Submission Success!</h3>
-      <textarea class="form-control my-3" id="summary-text" style="height: 220px; font-family: monospace;" readonly></textarea>
-      <button onclick="copyToClipboard()" class="btn btn-outline-primary btn-custom mb-2">Copy Report Text</button>
-      <button onclick="shareWhatsApp()" class="btn btn-success btn-custom mb-2">Share to WhatsApp</button>
-      <button onclick="location.reload()" class="btn btn-secondary btn-custom">Logout</button>
+      <textarea class="form-control my-3" id="summary-text" style="height: 250px; font-family: monospace;" readonly></textarea>
+      <div class="d-grid gap-2">
+        <button onclick="copyToClipboard()" class="btn btn-outline-primary btn-custom">Copy Report Text</button>
+        <button onclick="shareWhatsApp()" class="btn btn-success btn-custom">Share to WhatsApp</button>
+        <button onclick="location.reload()" class="btn btn-secondary btn-custom">Logout</button>
+      </div>
     </div>
   </div>
 </div>
@@ -118,8 +119,7 @@
       </thead>
       <tbody id="rpt-body"></tbody>
     </table>
-    <div id="rpt-productivity-area" class="rpt-productivity-box">
-        </div>
+    <div id="rpt-productivity-area" class="rpt-productivity-box"></div>
   </div>
 </div>
 
@@ -164,15 +164,12 @@
     };
     jobEntries.push(entry);
     renderList();
-    
-    // Clear dims
     ['dimL', 'dimW', 'dimH', 'dimNos', 'workLocation'].forEach(id => document.getElementById(id).value = '');
   }
 
   function renderList() {
     const container = document.getElementById('entries-list');
     container.innerHTML = jobEntries.map((j, i) => `<div class="job-item">${j.workLocation} (${j.jobType}) <button class="btn btn-sm btn-danger float-end" onclick="jobEntries.splice(${i},1);renderList();">X</button></div>`).join('');
-    
     if(jobEntries.length > 0) document.getElementById('final-manpower-section').classList.remove('hidden');
     else document.getElementById('final-manpower-section').classList.add('hidden');
   }
@@ -180,16 +177,10 @@
   function submitFinal() {
     const scaff = parseInt(document.getElementById('final-scaff').value) || 0;
     const help = parseInt(document.getElementById('final-help').value) || 0;
-    
     if(scaff + help === 0) { alert("Please enter total manpower."); return; }
-
     document.getElementById('loading').classList.remove('hidden');
-    
-    // Combine manpower data into entries for the database
     const finalData = jobEntries.map(entry => ({...entry, scaffolders: scaff, helpers: help, supervisorName: currentSupervisor}));
-
-    fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(finalData) })
-    .then(r => r.json()).then(() => {
+    fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(finalData) }).then(r => r.json()).then(() => {
         const stats = calculateProductivity(scaff, help);
         generateImage(stats);
         document.getElementById('view-form').classList.add('hidden');
@@ -201,19 +192,20 @@
   function calculateProductivity(scaff, help) {
     let totalE = 0, totalD = 0;
     jobEntries.forEach(j => {
-      const vol = (j.L * j.W * j.H * j.Nos);
+      const vol = (parseFloat(j.L) * parseFloat(j.W) * parseFloat(j.H) * parseFloat(j.Nos));
       if(j.jobType === 'Erection') totalE += vol;
       else totalD += vol;
     });
 
     const totalManpower = scaff + help;
+    const totalVolume = totalE + totalD;
     const totalManHours = totalManpower * 9;
-    const prod = totalManpower > 0 ? (totalE + totalD) / totalManpower : 0;
+    const prod = totalManHours > 0 ? (totalVolume / totalManHours) : 0;
 
-    reportText = `Date: ${jobEntries[0].date}\nSupervisor Name: ${currentSupervisor}\nTotal Erection: ${totalE.toFixed(2)}\nTotal Dismantling: ${totalD.toFixed(2)}\nScaffolders: ${scaff}\nHelpers: ${help}\nTotal Manpower: ${totalManpower}\nTotal Manhours: ${totalManHours}\nProductivity: ${prod.toFixed(2)} m³/hr`;
+    reportText = `Date: ${jobEntries[0].date}\nSupervisor Name: ${currentSupervisor}\n\nTOTAL MANPOWER: ${totalManpower}\nTOTAL ERECTION: ${totalE.toFixed(2)}\nTOTAL DISMANTLING: ${totalD.toFixed(2)}\nTOTAL VOLUME: ${totalVolume.toFixed(2)}\nTOTAL MANHOURS: ${totalManHours}\nPRODUCTIVITY: ${prod.toFixed(1)} m³/hr`;
     
     document.getElementById('summary-text').value = reportText;
-    return { totalE, totalD, scaff, help, totalManpower, totalManHours, prod };
+    return { totalE, totalD, totalVolume, totalManpower, totalManHours, prod };
   }
 
   function generateImage(s) {
@@ -221,17 +213,18 @@
     document.getElementById('rpt-date').innerText = jobEntries[0].date;
     const body = document.getElementById('rpt-body');
     body.innerHTML = jobEntries.map((j, i) => {
-        const v = (j.L * j.W * j.H * j.Nos).toFixed(2);
+        const v = (parseFloat(j.L) * parseFloat(j.W) * parseFloat(j.H) * parseFloat(j.Nos)).toFixed(2);
         return `<tr><td>${i+1}</td><td>${j.date}</td><td>${j.area}</td><td>${j.jobType}</td><td>${j.workLocation}</td><td>${j.L}</td><td>${j.W}</td><td>${j.H}</td><td>${j.Nos}</td><td>${v}</td></tr>`
     }).join('');
     
     document.getElementById('rpt-productivity-area').innerHTML = `
-        <div style="display:flex; justify-content:space-between;">
-            <span>Total Erection: ${s.totalE.toFixed(2)}</span>
-            <span>Total Dismantling: ${s.totalD.toFixed(2)}</span>
-        </div>
-        <div style="margin-top:10px; border-top: 1px dashed #ccc; padding-top:10px;">
-            Total Manpower: ${s.totalManpower} | Total Manhours: ${s.totalManHours} | Productivity: ${s.prod.toFixed(2)} m³/hr
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <div>TOTAL MANPOWER: ${s.totalManpower}</div>
+            <div>TOTAL ERECTION: ${s.totalE.toFixed(2)}</div>
+            <div>TOTAL DISMANTLING: ${s.totalD.toFixed(2)}</div>
+            <div>TOTAL VOLUME: ${s.totalVolume.toFixed(2)}</div>
+            <div>TOTAL MANHOURS: ${s.totalManHours}</div>
+            <div style="color:#0d6efd;">PRODUCTIVITY: ${s.prod.toFixed(1)} m³/hr</div>
         </div>
     `;
 

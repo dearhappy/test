@@ -16,15 +16,18 @@
     
     #loading { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.8); z-index:9999; display:flex; align-items:center; justify-content:center; }
     
-    /* A5 Landscape High-Res Hidden Container */
+    /* A5 Landscape High-Res Container */
     #offscreen-report-container { position: absolute; left: -9999px; top: 0; }
-    #report-capture { width: 2100px; min-height: 1485px; background: white; padding: 50px; box-sizing: border-box; font-family: Arial; display: flex; flex-direction: column; }
+    #report-capture { width: 2100px; min-height: 1485px; background: white; padding: 60px; box-sizing: border-box; font-family: Arial; display: flex; flex-direction: column; }
     .rpt-header { text-align: center; border-bottom: 4px solid #0d6efd; margin-bottom: 30px; padding-bottom: 10px; }
     .rpt-header h1 { font-size: 50px; color: #0d6efd; margin: 0; }
-    .rpt-meta { font-size: 28px; display: flex; justify-content: space-between; margin-bottom: 20px; }
-    #report-table { width: 100%; border-collapse: collapse; }
-    #report-table th { background: #0d6efd; color: white; font-size: 18px; padding: 10px; border: 1px solid #0b5ed7; }
-    #report-table td { border: 1px solid #ccc; padding: 10px; font-size: 20px; text-align: center; }
+    .rpt-meta { font-size: 28px; display: flex; justify-content: space-between; margin-bottom: 20px; color: #333; }
+    
+    #report-table { width: 100%; border-collapse: collapse; margin-bottom: 40px; }
+    #report-table th { background: #0d6efd; color: white; font-size: 20px; padding: 12px; border: 1px solid #0b5ed7; text-transform: uppercase; }
+    #report-table td { border: 1px solid #ccc; padding: 12px; font-size: 22px; text-align: center; }
+
+    .rpt-productivity-box { margin-top: auto; border-top: 3px solid #0d6efd; padding-top: 20px; font-size: 30px; color: #000; font-weight: bold; }
   </style>
 </head>
 <body>
@@ -68,14 +71,6 @@
           </select>
         </div>
       </div>
-      <div class="row g-2 mb-2">
-        <div class="col-6"><label class="small">Scaffolders</label><input type="number" id="scaffolders" class="form-control" value="0"></div>
-        <div class="col-6"><label class="small">Helpers</label><input type="number" id="helpers" class="form-control" value="0"></div>
-      </div>
-      <div class="row g-2 mb-2">
-        <div class="col-6"><label class="small">Start Time</label><input type="time" id="startTime" class="form-control"></div>
-        <div class="col-6"><label class="small">End Time</label><input type="time" id="endTime" class="form-control"></div>
-      </div>
       <div class="row g-2 mb-3">
         <div class="col-3"><input type="number" id="dimL" class="form-control" placeholder="L"></div>
         <div class="col-3"><input type="number" id="dimW" class="form-control" placeholder="W"></div>
@@ -83,18 +78,27 @@
         <div class="col-3"><input type="number" id="dimNos" class="form-control" placeholder="Nos"></div>
       </div>
       <button onclick="addEntry()" class="btn btn-outline-primary btn-custom mb-3">+ Add Entry</button>
+      
       <div id="entries-list" class="mb-3"></div>
-      <button id="btn-submit" onclick="submitFinal()" class="btn btn-success btn-custom" disabled>Submit & Checkout</button>
+
+      <div id="final-manpower-section" class="border-top pt-3 hidden">
+        <label class="fw-bold mb-2">Final Manpower Details</label>
+        <div class="row g-2 mb-3">
+            <div class="col-6"><input type="number" id="final-scaff" class="form-control" placeholder="Total Scaffolders"></div>
+            <div class="col-6"><input type="number" id="final-help" class="form-control" placeholder="Total Helpers"></div>
+        </div>
+        <button id="btn-submit" onclick="submitFinal()" class="btn btn-success btn-custom">Submit & Download Report</button>
+      </div>
     </div>
   </div>
 
   <div id="view-success" class="card card-custom hidden text-center">
     <div class="card-body p-4">
       <h3 class="text-success">Submission Success!</h3>
-      <textarea class="form-control my-3" id="summary-text" style="height: 180px;" readonly></textarea>
+      <textarea class="form-control my-3" id="summary-text" style="height: 220px; font-family: monospace;" readonly></textarea>
       <button onclick="copyToClipboard()" class="btn btn-outline-primary btn-custom mb-2">Copy Report Text</button>
       <button onclick="shareWhatsApp()" class="btn btn-success btn-custom mb-2">Share to WhatsApp</button>
-      <button onclick="location.reload()" class="btn btn-secondary btn-custom">New Entry</button>
+      <button onclick="location.reload()" class="btn btn-secondary btn-custom">Logout</button>
     </div>
   </div>
 </div>
@@ -103,22 +107,24 @@
   <div id="report-capture">
     <div class="rpt-header"><h1>Job Completion Report</h1></div>
     <div class="rpt-meta">
-      <div>Supervisor: <span id="rpt-sup"></span></div>
-      <div>Date: <span id="rpt-date"></span></div>
+      <div><strong>Supervisor:</strong> <span id="rpt-sup"></span></div>
+      <div><strong>Date:</strong> <span id="rpt-date"></span></div>
     </div>
     <table id="report-table">
       <thead>
         <tr>
-          <th>SL</th><th>DATE</th><th>AREA</th><th>JOB TYPE</th><th>LOCATION</th><th>SCAFFOLDERS</th><th>HELPERS</th><th>START</th><th>END</th><th>L</th><th>W</th><th>H</th><th>NOS</th>
+          <th>SL</th><th>DATE</th><th>AREA</th><th>JOB TYPE</th><th>LOCATION</th><th>L</th><th>W</th><th>H</th><th>NOS</th><th>VOLUME</th>
         </tr>
       </thead>
       <tbody id="rpt-body"></tbody>
     </table>
+    <div id="rpt-productivity-area" class="rpt-productivity-box">
+        </div>
   </div>
 </div>
 
 <script>
-  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxoFPOHeo8YPDu2kZYRVOZN7xUa3WfhNCRo0LPfAhSSPfHHSQYTO56sD-AIIhIaEIu2Qg/exec"; // Replace this
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxoFPOHeo8YPDu2kZYRVOZN7xUa3WfhNCRo0LPfAhSSPfHHSQYTO56sD-AIIhIaEIu2Qg/exec"; 
   let appData = { areas: [], users: [] };
   let currentSupervisor = "";
   let jobEntries = [];
@@ -150,11 +156,7 @@
       date: document.getElementById('date').value,
       area: document.getElementById('area').value,
       jobType: document.getElementById('jobType').value,
-      workLocation: document.getElementById('workLocation').value,
-      scaffolders: document.getElementById('scaffolders').value || 0,
-      helpers: document.getElementById('helpers').value || 0,
-      startTime: document.getElementById('startTime').value,
-      endTime: document.getElementById('endTime').value,
+      workLocation: document.getElementById('workLocation').value || "N/A",
       L: document.getElementById('dimL').value || 0,
       W: document.getElementById('dimW').value || 0,
       H: document.getElementById('dimH').value || 0,
@@ -162,69 +164,90 @@
     };
     jobEntries.push(entry);
     renderList();
+    
+    // Clear dims
+    ['dimL', 'dimW', 'dimH', 'dimNos', 'workLocation'].forEach(id => document.getElementById(id).value = '');
   }
 
   function renderList() {
     const container = document.getElementById('entries-list');
     container.innerHTML = jobEntries.map((j, i) => `<div class="job-item">${j.workLocation} (${j.jobType}) <button class="btn btn-sm btn-danger float-end" onclick="jobEntries.splice(${i},1);renderList();">X</button></div>`).join('');
-    document.getElementById('btn-submit').disabled = jobEntries.length === 0;
+    
+    if(jobEntries.length > 0) document.getElementById('final-manpower-section').classList.remove('hidden');
+    else document.getElementById('final-manpower-section').classList.add('hidden');
   }
 
   function submitFinal() {
+    const scaff = parseInt(document.getElementById('final-scaff').value) || 0;
+    const help = parseInt(document.getElementById('final-help').value) || 0;
+    
+    if(scaff + help === 0) { alert("Please enter total manpower."); return; }
+
     document.getElementById('loading').classList.remove('hidden');
-    fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(jobEntries) })
+    
+    // Combine manpower data into entries for the database
+    const finalData = jobEntries.map(entry => ({...entry, scaffolders: scaff, helpers: help, supervisorName: currentSupervisor}));
+
+    fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(finalData) })
     .then(r => r.json()).then(() => {
-        calculateProductivity();
-        generateImage();
+        const stats = calculateProductivity(scaff, help);
+        generateImage(stats);
         document.getElementById('view-form').classList.add('hidden');
         document.getElementById('view-success').classList.remove('hidden');
         document.getElementById('loading').classList.add('hidden');
     });
   }
 
-  function calculateProductivity() {
-    let totalE = 0, totalD = 0, totalManHours = 0, totalS = 0, totalH = 0;
-
+  function calculateProductivity(scaff, help) {
+    let totalE = 0, totalD = 0;
     jobEntries.forEach(j => {
       const vol = (j.L * j.W * j.H * j.Nos);
       if(j.jobType === 'Erection') totalE += vol;
-      else if(j.jobType === 'Dismantling') totalD += vol;
-
-      const start = new Date(`2000-01-01T${j.startTime}`);
-      const end = new Date(`2000-01-01T${j.endTime}`);
-      const hours = (end - start) / 3600000;
-      const manpower = parseInt(j.scaffolders) + parseInt(j.helpers);
-      
-      totalManHours += (hours * manpower);
-      totalS += parseInt(j.scaffolders);
-      totalH += parseInt(j.helpers);
+      else totalD += vol;
     });
 
-    const prod = totalManHours > 0 ? (totalE + (totalD / 2)) / totalManHours : 0;
+    const totalManpower = scaff + help;
+    const totalManHours = totalManpower * 9;
+    const prod = totalManpower > 0 ? (totalE + totalD) / totalManpower : 0;
+
+    reportText = `Date: ${jobEntries[0].date}\nSupervisor Name: ${currentSupervisor}\nTotal Erection: ${totalE.toFixed(2)}\nTotal Dismantling: ${totalD.toFixed(2)}\nScaffolders: ${scaff}\nHelpers: ${help}\nTotal Manpower: ${totalManpower}\nTotal Manhours: ${totalManHours}\nProductivity: ${prod.toFixed(2)} m³/hr`;
     
-    reportText = `Date: ${jobEntries[0].date}\nSupervisor: ${currentSupervisor}\nTotal Erection: ${totalE.toFixed(2)}\nTotal Dismantling: ${totalD.toFixed(2)}\nScaffolders: ${totalS}\nHelpers: ${totalH}\nProductivity: ${prod.toFixed(2)} m³/hr`;
     document.getElementById('summary-text').value = reportText;
+    return { totalE, totalD, scaff, help, totalManpower, totalManHours, prod };
   }
 
-  function generateImage() {
+  function generateImage(s) {
     document.getElementById('rpt-sup').innerText = currentSupervisor;
     document.getElementById('rpt-date').innerText = jobEntries[0].date;
     const body = document.getElementById('rpt-body');
-    body.innerHTML = jobEntries.map((j, i) => `<tr><td>${i+1}</td><td>${j.date}</td><td>${j.area}</td><td>${j.jobType}</td><td>${j.workLocation}</td><td>${j.scaffolders}</td><td>${j.helpers}</td><td>${j.startTime}</td><td>${j.endTime}</td><td>${j.L}</td><td>${j.W}</td><td>${j.H}</td><td>${j.Nos}</td></tr>`).join('');
+    body.innerHTML = jobEntries.map((j, i) => {
+        const v = (j.L * j.W * j.H * j.Nos).toFixed(2);
+        return `<tr><td>${i+1}</td><td>${j.date}</td><td>${j.area}</td><td>${j.jobType}</td><td>${j.workLocation}</td><td>${j.L}</td><td>${j.W}</td><td>${j.H}</td><td>${j.Nos}</td><td>${v}</td></tr>`
+    }).join('');
     
+    document.getElementById('rpt-productivity-area').innerHTML = `
+        <div style="display:flex; justify-content:space-between;">
+            <span>Total Erection: ${s.totalE.toFixed(2)}</span>
+            <span>Total Dismantling: ${s.totalD.toFixed(2)}</span>
+        </div>
+        <div style="margin-top:10px; border-top: 1px dashed #ccc; padding-top:10px;">
+            Total Manpower: ${s.totalManpower} | Total Manhours: ${s.totalManHours} | Productivity: ${s.prod.toFixed(2)} m³/hr
+        </div>
+    `;
+
     setTimeout(() => {
       html2canvas(document.querySelector("#report-capture")).then(canvas => {
         const link = document.createElement('a');
-        link.download = `Report_${currentSupervisor}.jpg`;
-        link.href = canvas.toDataURL("image/jpeg");
+        link.download = `JobReport_${currentSupervisor}.jpg`;
+        link.href = canvas.toDataURL("image/jpeg", 0.9);
         link.click();
       });
-    }, 500);
+    }, 800);
   }
 
   function copyToClipboard() {
     navigator.clipboard.writeText(reportText);
-    alert("Copied!");
+    alert("Copied to clipboard!");
   }
 
   function shareWhatsApp() {

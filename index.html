@@ -6,9 +6,20 @@
   <title>Daily Certification Portal</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
-    #report-container { width: 1050px; background: white; position: absolute; top: -9999px; left: -9999px; padding: 40px; }
-    .report-table th, .report-table td { border: 1px solid black; padding: 8px; text-align: center; font-size: 12px; }
+    /* A4 Landscape Dimensions: 297mm x 210mm (~1123px x 794px) */
+    #report-container { 
+      width: 1123px; 
+      min-height: 794px;
+      background: white; 
+      position: absolute; 
+      top: -9999px; 
+      left: -9999px; 
+      padding: 50px; 
+      box-sizing: border-box;
+    }
+    .report-table th, .report-table td { border: 1px solid black; padding: 6px; text-align: center; font-size: 11px; }
     .loader { border: 4px solid #f3f3f3; border-top: 4px solid #3b82f6; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     select { max-width: 100%; text-overflow: ellipsis; }
@@ -36,7 +47,7 @@
       </div>
 
       <div class="border-2 border-blue-100 p-4 rounded-xl bg-blue-50/50 overflow-hidden">
-        <label class="text-xs font-black mb-2 block uppercase text-blue-600">Step 1: Assign Manpower (Once for all jobs)</label>
+        <label class="text-xs font-black mb-2 block uppercase text-blue-600">Step 1: Assign Manpower</label>
         <div class="flex flex-row gap-2 mb-4 w-full">
           <select id="manpowerSelect" class="flex-1 min-w-0 p-2 border rounded text-sm bg-white truncate"></select>
           <button onclick="addManpower()" class="bg-blue-600 text-white px-5 rounded-lg font-bold shrink-0 shadow-md hover:bg-blue-700">+</button>
@@ -87,23 +98,27 @@
   </div>
 
   <div id="wa-modal" class="fixed inset-0 bg-black/80 hidden flex items-center justify-center z-50">
-    <div class="bg-white p-8 rounded-3xl text-center max-w-xs w-full shadow-2xl">
+    <div class="bg-white p-8 rounded-3xl text-center max-w-sm w-full shadow-2xl">
       <h3 class="text-2xl font-black mb-2 text-green-600">SUCCESS</h3>
-      <p class="text-sm text-gray-500 mb-8">Daily Certification Downloaded.</p>
-      <a id="wa-link" href="#" target="_blank" class="block w-full bg-green-500 text-white py-4 rounded-xl font-bold mb-4">SHARE VIA WHATSAPP</a>
-      <button onclick="location.reload()" class="text-gray-400 font-bold text-xs underline uppercase">New Session</button>
+      <p class="text-sm text-gray-500 mb-6">Reports generated successfully.</p>
+      
+      <div class="space-y-3">
+        <button onclick="downloadAsPDF()" class="w-full bg-red-600 text-white py-3 rounded-xl font-bold">DOWNLOAD PDF</button>
+        <a id="wa-link" href="#" target="_blank" class="block w-full bg-green-500 text-white py-3 rounded-xl font-bold">SHARE VIA WHATSAPP</a>
+        <button onclick="location.reload()" class="w-full text-gray-400 font-bold text-xs underline uppercase">New Session</button>
+      </div>
     </div>
   </div>
 
   <div id="report-container">
     <div style="text-align: center; border-bottom: 3px solid black; padding-bottom: 15px; margin-bottom: 20px;">
-      <h1 style="font-size: 36px; font-weight: 900; margin: 0; letter-spacing: 2px;">DAILY CERTIFICATION</h1>
+      <h1 style="font-size: 32px; font-weight: 900; margin: 0; letter-spacing: 2px;">DAILY CERTIFICATION</h1>
     </div>
-    <div style="display: flex; justify-content: space-between; margin-bottom: 20px; font-weight: bold; font-size: 14px;">
+    <div style="display: flex; justify-content: space-between; margin-bottom: 15px; font-weight: bold; font-size: 14px;">
       <p>SUPERVISOR: <span id="rpt-sup"></span></p>
       <p>DATE: <span id="rpt-date"></span></p>
     </div>
-    <table class="report-table w-full mb-8">
+    <table class="report-table w-full mb-6">
       <thead>
         <tr style="background: #f2f2f2;">
           <th>SL</th><th>Area</th><th>Job Type</th><th>Location</th><th>Scaff Type</th><th>Elev</th><th>Scaffs</th><th>Helps</th><th>Start</th><th>End</th><th>L</th><th>W</th><th>H</th><th>Nos</th><th>Volume</th>
@@ -112,8 +127,8 @@
       <tbody id="rpt-body"></tbody>
     </table>
     
-    <h3 style="font-size: 18px; font-weight: 900; border-bottom: 2px solid black; margin-bottom: 10px;">MANPOWER DETAILS</h3>
-    <table class="report-table w-full mb-6" style="width: 85%;">
+    <h3 style="font-size: 16px; font-weight: 900; border-bottom: 2px solid black; margin-bottom: 10px;">MANPOWER DETAILS</h3>
+    <table class="report-table w-full mb-6" style="width: 70%;">
       <thead>
         <tr style="background: #f2f2f2;">
           <th>SL NO.</th><th>NAME</th><th>DESIGNATION</th><th>SCRUM ID</th><th>OVERTIME</th>
@@ -122,19 +137,19 @@
       <tbody id="rpt-mp-body"></tbody>
     </table>
 
-    <div style="display: flex; justify-content: center; gap: 40px; font-weight: 900; font-size: 16px; margin-bottom: 30px; border: 2px solid black; padding: 15px; background: #f9f9f9; text-transform: uppercase;">
+    <div style="display: flex; justify-content: center; gap: 40px; font-weight: 900; font-size: 14px; margin-bottom: 40px; border: 2px solid black; padding: 10px; background: #f9f9f9; text-transform: uppercase;">
       <span>Total Scaffolder: <span id="rpt-total-scaff">0</span></span>
       <span>Total Helper: <span id="rpt-total-help">0</span></span>
       <span>Total Supervisor: <span id="rpt-total-sup">1</span></span>
     </div>
 
-    <div style="margin-top: 60px; display: flex; justify-content: space-between; padding: 0 40px;">
+    <div style="margin-top: 50px; display: flex; justify-content: space-between; padding: 0 40px;">
       <div style="text-align: center; border-top: 1px solid black; width: 250px; padding-top: 10px;">
-        <p id="rpt-sup-sig" style="font-weight: bold; margin: 0;"></p>
+        <p id="rpt-sup-sig" style="font-weight: bold; margin: 0; font-size: 14px;"></p>
         <p style="font-size: 11px;">Supervisor Signature</p>
       </div>
       <div style="text-align: center; border-top: 1px solid black; width: 250px; padding-top: 10px;">
-        <p id="rpt-amns-sig" style="font-weight: bold; margin: 0;"></p>
+        <p id="rpt-amns-sig" style="font-weight: bold; margin: 0; font-size: 14px;"></p>
         <p style="font-size: 11px;">AMNS Engineer Signature</p>
       </div>
     </div>
@@ -252,6 +267,7 @@
       document.getElementById('rpt-date').innerText = batch[0].date;
       document.getElementById('rpt-sup-sig').innerText = currentUser;
       document.getElementById('rpt-amns-sig').innerText = batch[0].amnsEng;
+      
       const body = document.getElementById('rpt-body');
       const mpBody = document.getElementById('rpt-mp-body');
       body.innerHTML = "";
@@ -267,32 +283,38 @@
         </tr>`;
       });
 
-      // CALCULATE TOTALS FROM ADDED MANPOWER
-      let tScaff = 0;
-      let tHelp = 0;
-
+      let tScaff = 0, tHelp = 0;
       currentManpower.forEach((m, idx) => {
-          // Counting logic based on added designation
           const desig = m.designation.toLowerCase();
           if(desig.includes('scaffolder')) tScaff++;
           else if(desig.includes('helper')) tHelp++;
-
           mpBody.innerHTML += `<tr>
             <td>${idx+1}</td><td>${m.name}</td><td>${m.designation}</td><td>${m.scrum}</td><td></td> 
           </tr>`;
       });
 
-      // Update the summary span IDs
       document.getElementById('rpt-total-scaff').innerText = tScaff;
       document.getElementById('rpt-total-help').innerText = tHelp;
-      document.getElementById('rpt-total-sup').innerText = currentUser ? "1" : "0";
+      document.getElementById('rpt-total-sup').innerText = "1";
 
+      // Auto download JPG first as usual
       html2canvas(document.getElementById('report-container'), { scale: 2 }).then(canvas => {
         const link = document.createElement('a');
         link.download = `Certification_${Date.now()}.jpg`;
         link.href = canvas.toDataURL("image/jpeg", 0.9);
         link.click();
         document.getElementById('wa-modal').classList.remove('hidden');
+      });
+    }
+
+    // New PDF Function
+    function downloadAsPDF() {
+      const { jsPDF } = window.jspdf;
+      html2canvas(document.getElementById('report-container'), { scale: 2 }).then(canvas => {
+        const imgData = canvas.toDataURL('image/jpeg', 1.0);
+        const pdf = new jsPDF('l', 'px', [1123, 794]);
+        pdf.addImage(imgData, 'JPEG', 0, 0, 1123, 794);
+        pdf.save(`Certification_${Date.now()}.pdf`);
       });
     }
   </script>

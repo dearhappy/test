@@ -122,10 +122,10 @@
       <tbody id="rpt-mp-body"></tbody>
     </table>
 
-    <div style="display: flex; justify-content: center; gap: 50px; font-weight: bold; font-size: 16px; margin-bottom: 30px; border: 1px solid black; padding: 10px; background: #fafafa;">
+    <div style="display: flex; justify-content: center; gap: 40px; font-weight: 900; font-size: 16px; margin-bottom: 30px; border: 2px solid black; padding: 15px; background: #f9f9f9; text-transform: uppercase;">
       <span>Total Scaffolder: <span id="rpt-total-scaff">0</span></span>
       <span>Total Helper: <span id="rpt-total-help">0</span></span>
-      <span>Total Supervisor: 1</span>
+      <span>Total Supervisor: <span id="rpt-total-sup">1</span></span>
     </div>
 
     <div style="margin-top: 60px; display: flex; justify-content: space-between; padding: 0 40px;">
@@ -267,18 +267,25 @@
         </tr>`;
       });
 
-      let totalScaff = 0;
-      let totalHelp = 0;
+      // CALCULATE TOTALS FROM ADDED MANPOWER
+      let tScaff = 0;
+      let tHelp = 0;
+
       currentManpower.forEach((m, idx) => {
-          if(m.designation.toLowerCase().includes('scaffolder')) totalScaff++;
-          if(m.designation.toLowerCase().includes('helper')) totalHelp++;
+          // Counting logic based on added designation
+          const desig = m.designation.toLowerCase();
+          if(desig.includes('scaffolder')) tScaff++;
+          else if(desig.includes('helper')) tHelp++;
+
           mpBody.innerHTML += `<tr>
             <td>${idx+1}</td><td>${m.name}</td><td>${m.designation}</td><td>${m.scrum}</td><td></td> 
           </tr>`;
       });
 
-      document.getElementById('rpt-total-scaff').innerText = totalScaff;
-      document.getElementById('rpt-total-help').innerText = totalHelp;
+      // Update the summary span IDs
+      document.getElementById('rpt-total-scaff').innerText = tScaff;
+      document.getElementById('rpt-total-help').innerText = tHelp;
+      document.getElementById('rpt-total-sup').innerText = currentUser ? "1" : "0";
 
       html2canvas(document.getElementById('report-container'), { scale: 2 }).then(canvas => {
         const link = document.createElement('a');

@@ -17,7 +17,7 @@
 
   <div id="login-view" class="flex items-center justify-center min-h-screen p-4">
     <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border-t-8 border-blue-600">
-      <h2 class="text-3xl font-black text-center mb-6 text-gray-800">DAILY CERTIFICATION</h2>
+      <h2 class="text-3xl font-black text-center mb-6 text-gray-800 uppercase">Daily Certification</h2>
       <div id="login-loading" class="flex justify-center mb-4"><div class="loader"></div></div>
       <div id="login-form" class="hidden space-y-4">
         <select id="login-user" class="w-full p-4 border rounded-xl bg-gray-50"></select>
@@ -27,81 +27,84 @@
     </div>
   </div>
 
-  <div id="app-view" class="hidden max-w-2xl mx-auto p-4">
-    <div class="bg-white rounded-2xl shadow-lg p-6 space-y-4">
+  <div id="app-view" class="hidden max-w-2xl mx-auto p-4 pb-20">
+    <div class="bg-white rounded-2xl shadow-lg p-6 space-y-6">
       <div class="flex justify-between border-b pb-4">
-        <h1 class="font-black text-blue-600">NEW CERTIFICATION</h1>
+        <h1 class="font-black text-blue-600 uppercase">Certification Entry</h1>
         <span id="user-display" class="text-xs font-bold uppercase bg-blue-100 px-2 py-1 rounded"></span>
       </div>
 
-      <div class="grid grid-cols-2 gap-4">
-        <input type="date" id="date" class="border p-2 rounded w-full">
-        <select id="area" class="border p-2 rounded w-full"></select>
-      </div>
-
-      <div class="grid grid-cols-2 gap-4">
-        <select id="jobType" class="border p-2 rounded w-full">
-          <option>Erection</option><option>Dismantling</option><option>Materials Shifting</option><option>Unloading</option>
-        </select>
-        <select id="scaffType" class="border p-2 rounded w-full">
-          <option>Normal</option><option>Suspended</option><option>Designed</option>
-        </select>
-      </div>
-
-      <input type="text" id="workLocation" placeholder="Work Location / Equipment No." class="border p-2 rounded w-full text-lg font-bold">
-
-      <div class="grid grid-cols-2 gap-4">
-        <select id="elevation" class="border p-2 rounded w-full">
-          <option>0–10</option><option>10–20</option><option>20–30</option><option>30–40</option><option>40–50</option><option>0–45</option>
-        </select>
-        <input type="text" id="amnsEng" placeholder="AMNS Engineer Name" class="border p-2 rounded w-full uppercase">
-      </div>
-
-      <div class="grid grid-cols-2 gap-4">
-        <div><label class="text-[10px] font-bold">Start Time</label><input type="time" id="startTime" class="border p-2 rounded w-full"></div>
-        <div><label class="text-[10px] font-bold">End Time</label><input type="time" id="endTime" class="border p-2 rounded w-full"></div>
-      </div>
-
-      <div class="bg-blue-50 p-4 rounded-xl grid grid-cols-5 gap-2 items-end">
-        <div><label class="text-[9px] font-bold">L</label><input type="number" id="dimL" class="vol-calc w-full border-b border-blue-300 bg-transparent p-1"></div>
-        <div><label class="text-[9px] font-bold">W</label><input type="number" id="dimW" class="vol-calc w-full border-b border-blue-300 bg-transparent p-1"></div>
-        <div><label class="text-[9px] font-bold">H</label><input type="number" id="dimH" class="vol-calc w-full border-b border-blue-300 bg-transparent p-1"></div>
-        <div><label class="text-[9px] font-bold">Nos</label><input type="number" id="dimNos" class="vol-calc w-full border-b border-blue-300 bg-transparent p-1"></div>
-        <div class="text-center"><label class="text-[9px] font-bold block">VOLUME</label><span id="vol-display" class="font-black">0</span></div>
-      </div>
-
-      <div class="border p-4 rounded-xl bg-gray-50">
-        <label class="text-xs font-bold mb-2 block">ASSIGN MANPOWER</label>
+      <div class="border-2 border-blue-100 p-4 rounded-xl bg-blue-50/50">
+        <label class="text-xs font-black mb-2 block uppercase text-blue-600">Step 1: Assign Manpower (Once for all jobs)</label>
         <div class="flex gap-2 mb-4">
           <select id="manpowerSelect" class="flex-1 p-2 border rounded text-sm bg-white"></select>
-          <button onclick="addManpower()" class="bg-green-600 text-white px-4 rounded font-bold">+</button>
+          <button onclick="addManpower()" class="bg-blue-600 text-white px-4 rounded font-bold">+</button>
         </div>
-        <ul id="manpowerList" class="space-y-1 text-xs"></ul>
+        <ul id="manpowerList" class="space-y-1 text-xs mb-2"></ul>
+        <p class="text-[10px] text-gray-500 italic">* Assigned manpower will be applied to all jobs added below.</p>
       </div>
 
-      <div class="flex gap-4 pt-4">
-        <button onclick="addEntryToBatch()" class="flex-1 bg-gray-800 text-white py-4 rounded-xl font-bold">ADD TO DAILY LIST</button>
-        <button onclick="submitBatch()" id="submitBtn" class="flex-1 bg-blue-600 text-white py-4 rounded-xl font-bold opacity-50" disabled>SUBMIT & DOWNLOAD (<span id="count">0</span>)</button>
+      <div class="space-y-4 pt-4 border-t">
+        <label class="text-xs font-black block uppercase text-gray-600">Step 2: Add Job Details</label>
+        <div class="grid grid-cols-2 gap-4">
+          <input type="date" id="date" class="border p-2 rounded w-full">
+          <select id="area" class="border p-2 rounded w-full"></select>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <select id="jobType" class="border p-2 rounded w-full">
+            <option>Erection</option><option>Dismantling</option><option>Materials Shifting</option><option>Unloading</option>
+          </select>
+          <select id="scaffType" class="border p-2 rounded w-full">
+            <option>Normal</option><option>Suspended</option><option>Designed</option>
+          </select>
+        </div>
+
+        <input type="text" id="workLocation" placeholder="Work Location / Equipment No." class="border p-2 rounded w-full text-lg font-bold">
+
+        <div class="grid grid-cols-2 gap-4">
+          <select id="elevation" class="border p-2 rounded w-full">
+            <option>0–10</option><option>10–20</option><option>20–30</option><option>30–40</option><option>40–50</option><option>0–45</option>
+          </select>
+          <input type="text" id="amnsEng" placeholder="AMNS Engineer Name" class="border p-2 rounded w-full uppercase">
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div><label class="text-[10px] font-bold">Start Time</label><input type="time" id="startTime" class="border p-2 rounded w-full"></div>
+          <div><label class="text-[10px] font-bold">End Time</label><input type="time" id="endTime" class="border p-2 rounded w-full"></div>
+        </div>
+
+        <div class="bg-gray-50 p-4 rounded-xl grid grid-cols-5 gap-2 items-end">
+          <div><label class="text-[9px] font-bold">L</label><input type="number" id="dimL" class="vol-calc w-full border-b border-gray-300 bg-transparent p-1"></div>
+          <div><label class="text-[9px] font-bold">W</label><input type="number" id="dimW" class="vol-calc w-full border-b border-gray-300 bg-transparent p-1"></div>
+          <div><label class="text-[9px] font-bold">H</label><input type="number" id="dimH" class="vol-calc w-full border-b border-gray-300 bg-transparent p-1"></div>
+          <div><label class="text-[9px] font-bold">Nos</label><input type="number" id="dimNos" class="vol-calc w-full border-b border-gray-300 bg-transparent p-1"></div>
+          <div class="text-center"><label class="text-[9px] font-bold block">VOLUME</label><span id="vol-display" class="font-black">0</span></div>
+        </div>
+
+        <div class="flex gap-4 pt-4">
+          <button onclick="addEntryToBatch()" class="flex-1 bg-gray-800 text-white py-4 rounded-xl font-bold">ADD JOB</button>
+          <button onclick="submitBatch()" id="submitBtn" class="flex-1 bg-blue-600 text-white py-4 rounded-xl font-bold opacity-50" disabled>SUBMIT (<span id="count">0</span>)</button>
+        </div>
       </div>
     </div>
   </div>
 
   <div id="wa-modal" class="fixed inset-0 bg-black/80 hidden flex items-center justify-center z-50">
     <div class="bg-white p-8 rounded-3xl text-center max-w-xs w-full shadow-2xl">
-      <h3 class="text-2xl font-black mb-2">SUCCESS</h3>
+      <h3 class="text-2xl font-black mb-2 text-green-600">SUCCESS</h3>
       <p class="text-sm text-gray-500 mb-8">Daily Certification Downloaded.</p>
       <a id="wa-link" href="#" target="_blank" class="block w-full bg-green-500 text-white py-4 rounded-xl font-bold mb-4">SHARE VIA WHATSAPP</a>
-      <button onclick="location.reload()" class="text-gray-400 font-bold text-xs underline">START NEW SESSION</button>
+      <button onclick="location.reload()" class="text-gray-400 font-bold text-xs underline uppercase">New Session</button>
     </div>
   </div>
 
   <div id="report-container">
-    <div style="text-align: center; border-bottom: 3px solid black; padding-bottom: 10px; margin-bottom: 20px;">
-      <h1 style="font-size: 32px; font-weight: 900; margin: 0;">DAILY CERTIFICATION</h1>
-      <p style="font-size: 14px; margin: 5px 0;">AM/NS INDIA - SCAFFOLDING SERVICES</p>
+    <div style="text-align: center; border-bottom: 3px solid black; padding-bottom: 15px; margin-bottom: 20px;">
+      <h1 style="font-size: 36px; font-weight: 900; margin: 0; letter-spacing: 2px;">DAILY CERTIFICATION</h1>
     </div>
 
-    <div style="display: flex; justify-content: space-between; margin-bottom: 20px; font-weight: bold;">
+    <div style="display: flex; justify-content: space-between; margin-bottom: 20px; font-weight: bold; font-size: 14px;">
       <p>SUPERVISOR: <span id="rpt-sup"></span></p>
       <p>DATE: <span id="rpt-date"></span></p>
     </div>
@@ -115,7 +118,7 @@
       <tbody id="rpt-body"></tbody>
     </table>
 
-    <h3 style="font-size: 18px; font-weight: 900; border-bottom: 2px solid black; margin-bottom: 10px;">MANPOWER BREAKDOWN</h3>
+    <h3 style="font-size: 18px; font-weight: 900; border-bottom: 2px solid black; margin-bottom: 10px;">MANPOWER DETAILS</h3>
     <table class="report-table w-full mb-10" style="width: 80%;">
       <thead>
         <tr style="background: #f2f2f2;"><th>SL NO.</th><th>NAME</th><th>DESIGNATION</th><th>SCRUM ID</th><th>ORACLE ID</th></tr>
@@ -148,24 +151,20 @@
           document.getElementById('login-loading').remove();
           document.getElementById('login-form').classList.remove('hidden');
           
-          // Populate Login Users
           const userSel = document.getElementById('login-user');
           userSel.innerHTML = '<option value="">Select Supervisor</option>';
           data.users.forEach(u => userSel.innerHTML += `<option>${u.user}</option>`);
 
-          // Populate Manpower Dropdown (Fix Applied)
           const mpSel = document.getElementById('manpowerSelect');
-          mpSel.innerHTML = '<option value="">Search/Select Manpower</option>';
+          mpSel.innerHTML = '<option value="">Select Manpower</option>';
           data.manpowerList.forEach((m, i) => {
             mpSel.innerHTML += `<option value="${i}">${m.display}</option>`;
           });
 
-          // Populate Areas
           const areaSel = document.getElementById('area');
           data.areas.forEach(a => areaSel.innerHTML += `<option>${a}</option>`);
         });
 
-      // Volume Calculation Listener
       document.querySelectorAll('.vol-calc').forEach(input => {
         input.addEventListener('input', () => {
           const l = document.getElementById('dimL').value || 0;
@@ -186,14 +185,13 @@
         document.getElementById('login-view').classList.add('hidden');
         document.getElementById('app-view').classList.remove('hidden');
         document.getElementById('user-display').innerText = user;
-      } else alert("Access Denied: Incorrect Passcode");
+      } else alert("Invalid Passcode");
     }
 
     function addManpower() {
       const idx = document.getElementById('manpowerSelect').value;
       if (idx === "") return;
       const person = appData.manpowerList[idx];
-      // Prevent duplicates
       if (!currentManpower.find(m => m.scrum === person.scrum)) {
         currentManpower.push(person);
         renderManpowerList();
@@ -204,7 +202,7 @@
       const list = document.getElementById('manpowerList');
       list.innerHTML = "";
       currentManpower.forEach((m, i) => {
-        list.innerHTML += `<li class="flex justify-between items-center bg-white p-2 rounded border border-gray-200">
+        list.innerHTML += `<li class="flex justify-between items-center bg-white p-2 rounded border">
           <span>${m.name} (${m.designation})</span>
           <button onclick="currentManpower.splice(${i},1);renderManpowerList()" class="text-red-500 font-bold px-2">X</button>
         </li>`;
@@ -217,6 +215,9 @@
       const h = document.getElementById('dimH').value || 0;
       const n = document.getElementById('dimNos').value || 0;
       
+      if (currentManpower.length === 0) { alert("Please select manpower first!"); return; }
+      if (!document.getElementById('workLocation').value) { alert("Location is required"); return; }
+
       const entry = {
         date: document.getElementById('date').value,
         area: document.getElementById('area').value,
@@ -230,29 +231,25 @@
         l: l, w: w, h: h, nos: n,
         volume: (l * w * h * n).toFixed(2),
         supervisor: currentUser,
-        manpowerDetails: [...currentManpower]
+        // Manpower is the same for all entries in this batch
+        manpowerDetails: [...currentManpower] 
       };
-
-      if (!entry.workLocation) { alert("Work Location is required"); return; }
-      if (currentManpower.length === 0) { alert("Assign at least one manpower"); return; }
 
       batch.push(entry);
       document.getElementById('count').innerText = batch.length;
       document.getElementById('submitBtn').disabled = false;
       document.getElementById('submitBtn').classList.remove('opacity-50');
       
-      // Reset only work-specific fields
+      // Clear only work details, keep date/area/manpower
       document.getElementById('workLocation').value = "";
       document.getElementById('vol-display').innerText = "0";
-      currentManpower = []; renderManpowerList();
-      alert("Job entry saved to daily list.");
+      alert("Job added.");
     }
 
     async function submitBatch() {
       const btn = document.getElementById('submitBtn');
-      btn.innerText = "UPLOADING...";
+      btn.innerText = "SENDING...";
       btn.disabled = true;
-      
       const response = await fetch(WEB_APP_URL, { method: 'POST', body: JSON.stringify(batch) });
       const result = await response.json();
       if (result.success) generateCertification();
@@ -276,18 +273,18 @@
           <td>${j.scaffoldingType}</td><td>${j.elevation}</td><td>${scaf}</td><td>${help}</td>
           <td>${j.startTime}</td><td>${j.endTime}</td><td>${j.l}</td><td>${j.w}</td><td>${j.h}</td><td>${j.nos}</td><td>${j.volume}</td>
         </tr>`;
+      });
 
-        j.manpowerDetails.forEach((m, idx) => {
+      // Show manpower list once at the bottom
+      currentManpower.forEach((m, idx) => {
           mpBody.innerHTML += `<tr><td>${idx+1}</td><td>${m.name}</td><td>${m.designation}</td><td>${m.scrum}</td><td>${m.oracle}</td></tr>`;
-        });
       });
 
       html2canvas(document.getElementById('report-container'), { scale: 2 }).then(canvas => {
         const link = document.createElement('a');
-        link.download = `Daily_Cert_${Date.now()}.jpg`;
+        link.download = `Certification_${Date.now()}.jpg`;
         link.href = canvas.toDataURL("image/jpeg", 0.9);
         link.click();
-        document.getElementById('wa-link').href = `https://wa.me/?text=Daily%20Certification%20Report%20Submitted%20by%20${currentUser}`;
         document.getElementById('wa-modal').classList.remove('hidden');
       });
     }

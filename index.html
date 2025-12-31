@@ -11,6 +11,8 @@
     .report-table th, .report-table td { border: 1px solid black; padding: 8px; text-align: center; font-size: 12px; }
     .loader { border: 4px solid #f3f3f3; border-top: 4px solid #3b82f6; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    /* Fix for long text in dropdowns */
+    select { max-width: 100%; text-overflow: ellipsis; }
   </style>
 </head>
 <body class="bg-gray-100 min-h-screen">
@@ -34,16 +36,16 @@
         <span id="user-display" class="text-xs font-bold uppercase bg-blue-100 px-2 py-1 rounded"></span>
       </div>
 
-      <div class="border-2 border-blue-100 p-4 rounded-xl bg-blue-50/50">
+      <div class="border-2 border-blue-100 p-4 rounded-xl bg-blue-50/50 overflow-hidden">
         <label class="text-xs font-black mb-2 block uppercase text-blue-600">Step 1: Assign Manpower (Once for all jobs)</label>
-        <div class="flex gap-2 mb-4">
-          <select id="manpowerSelect" class="flex-1 p-2 border rounded text-sm bg-white"></select>
-          <button onclick="addManpower()" class="bg-blue-600 text-white px-4 rounded font-bold">+</button>
+        <div class="flex flex-row gap-2 mb-4 w-full">
+          <select id="manpowerSelect" class="flex-1 min-w-0 p-2 border rounded text-sm bg-white truncate"></select>
+          <button onclick="addManpower()" class="bg-blue-600 text-white px-5 rounded-lg font-bold shrink-0 shadow-md">+</button>
         </div>
-        <ul id="manpowerList" class="space-y-1 text-xs mb-2"></ul>
+        <ul id="manpowerList" class="space-y-1 text-xs mb-2 max-h-40 overflow-y-auto"></ul>
       </div>
 
-      <div class="space-y-4 pt-4 border-t">
+      <div class="space-y-4 pt-2 border-t">
         <label class="text-xs font-black block uppercase text-gray-600">Step 2: Add Job Details</label>
         <div class="grid grid-cols-2 gap-4">
           <input type="date" id="date" class="border p-2 rounded w-full">
@@ -186,9 +188,9 @@
       const list = document.getElementById('manpowerList');
       list.innerHTML = "";
       currentManpower.forEach((m, i) => {
-        list.innerHTML += `<li class="flex justify-between items-center bg-white p-2 rounded border">
-          <span>${m.name} (${m.designation})</span>
-          <button onclick="currentManpower.splice(${i},1);renderManpowerList()" class="text-red-500 font-bold px-2">X</button>
+        list.innerHTML += `<li class="flex justify-between items-center bg-white p-2 rounded border shadow-sm">
+          <span class="truncate pr-2">${m.name} (${m.designation})</span>
+          <button onclick="currentManpower.splice(${i},1);renderManpowerList()" class="text-red-500 font-bold px-2 shrink-0">X</button>
         </li>`;
       });
     }
@@ -249,7 +251,6 @@
           <td>${j.startTime}</td><td>${j.endTime}</td><td>${j.l}</td><td>${j.w}</td><td>${j.h}</td><td>${j.nos}</td><td>${j.volume}</td>
         </tr>`;
       });
-      // REMOVED ORACLE ID FROM THE ROW DATA
       currentManpower.forEach((m, idx) => {
           mpBody.innerHTML += `<tr><td>${idx+1}</td><td>${m.name}</td><td>${m.designation}</td><td>${m.scrum}</td></tr>`;
       });

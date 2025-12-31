@@ -8,7 +8,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
-    /* A4 Landscape Dimensions: 297mm x 210mm (~1123px x 794px) */
     #report-container { 
       width: 1123px; 
       min-height: 794px;
@@ -98,10 +97,9 @@
   </div>
 
   <div id="wa-modal" class="fixed inset-0 bg-black/80 hidden flex items-center justify-center z-50">
-    <div class="bg-white p-8 rounded-3xl text-center max-w-sm w-full shadow-2xl">
+    <div class="bg-white p-8 rounded-3xl text-center max-sm w-full shadow-2xl">
       <h3 class="text-2xl font-black mb-2 text-green-600">SUCCESS</h3>
       <p class="text-sm text-gray-500 mb-6">Reports generated successfully.</p>
-      
       <div class="space-y-3">
         <button onclick="downloadAsPDF()" class="w-full bg-red-600 text-white py-3 rounded-xl font-bold">DOWNLOAD PDF</button>
         <a id="wa-link" href="#" target="_blank" class="block w-full bg-green-500 text-white py-3 rounded-xl font-bold">SHARE VIA WHATSAPP</a>
@@ -115,7 +113,7 @@
       <h1 style="font-size: 32px; font-weight: 900; margin: 0; letter-spacing: 2px;">DAILY CERTIFICATION</h1>
     </div>
     <div style="display: flex; justify-content: space-between; margin-bottom: 15px; font-weight: bold; font-size: 14px;">
-      <p>SUPERVISOR: <span id="rpt-sup"></span></p>
+      <p>LOGIN USER: <span id="rpt-sup"></span></p>
       <p>DATE: <span id="rpt-date"></span></p>
     </div>
     <table class="report-table w-full mb-6">
@@ -140,7 +138,7 @@
     <div style="display: flex; justify-content: center; gap: 40px; font-weight: 900; font-size: 14px; margin-bottom: 40px; border: 2px solid black; padding: 10px; background: #f9f9f9; text-transform: uppercase;">
       <span>Total Scaffolder: <span id="rpt-total-scaff">0</span></span>
       <span>Total Helper: <span id="rpt-total-help">0</span></span>
-      <span>Total Supervisor: <span id="rpt-total-sup">1</span></span>
+      <span>Total Supervisor: <span id="rpt-total-sup">0</span></span>
     </div>
 
     <div style="margin-top: 50px; display: flex; justify-content: space-between; padding: 0 40px;">
@@ -283,11 +281,14 @@
         </tr>`;
       });
 
-      let tScaff = 0, tHelp = 0;
+      // DYNAMIC CALCULATION OF TOTALS BASED ON ADDED LIST
+      let tScaff = 0, tHelp = 0, tSup = 0;
       currentManpower.forEach((m, idx) => {
           const desig = m.designation.toLowerCase();
           if(desig.includes('scaffolder')) tScaff++;
           else if(desig.includes('helper')) tHelp++;
+          else if(desig.includes('supervisor')) tSup++; // FIXED: Now counts added supervisors
+          
           mpBody.innerHTML += `<tr>
             <td>${idx+1}</td><td>${m.name}</td><td>${m.designation}</td><td>${m.scrum}</td><td></td> 
           </tr>`;
@@ -295,9 +296,8 @@
 
       document.getElementById('rpt-total-scaff').innerText = tScaff;
       document.getElementById('rpt-total-help').innerText = tHelp;
-      document.getElementById('rpt-total-sup').innerText = "1";
+      document.getElementById('rpt-total-sup').innerText = tSup;
 
-      // Auto download JPG first as usual
       html2canvas(document.getElementById('report-container'), { scale: 2 }).then(canvas => {
         const link = document.createElement('a');
         link.download = `Certification_${Date.now()}.jpg`;
@@ -307,7 +307,6 @@
       });
     }
 
-    // New PDF Function
     function downloadAsPDF() {
       const { jsPDF } = window.jspdf;
       html2canvas(document.getElementById('report-container'), { scale: 2 }).then(canvas => {

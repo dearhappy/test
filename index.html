@@ -13,6 +13,7 @@
       --present:#16a34a;
       --absent:#dc2626;
       --off:#6b7280;
+      --ph:#9333ea;
     }
     *{box-sizing:border-box;font-family:system-ui,-apple-system,Segoe UI,Roboto}
     body{margin:0;background:var(--bg);color:var(--primary)}
@@ -23,26 +24,24 @@
     button{padding:.7rem 1rem;border:none;border-radius:.5rem;background:var(--accent);color:#fff;font-weight:600}
     .card{background:var(--card);border-radius:1rem;padding:1rem;box-shadow:0 8px 20px rgba(0,0,0,.06)}
     .info{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:1rem}
-    .info div{font-size:.9rem}
     .calendar{display:grid;grid-template-columns:repeat(7,1fr);gap:.5rem}
-    .day{padding:.6rem;border-radius:.5rem;text-align:center;font-size:.8rem}
+    .day{padding:.6rem;border-radius:.5rem;text-align:center;font-size:.75rem}
     .present{background:#dcfce7;color:var(--present)}
     .absent{background:#fee2e2;color:var(--absent)}
     .off{background:#e5e7eb;color:var(--off)}
-    footer{text-align:center;font-size:.75rem;color:#6b7280;margin-top:1rem}
+    .ph{background:#f3e8ff;color:var(--ph)}
     @media(max-width:600px){.info{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
-  <header>Worker Attendance Portal</header>
-  <div class="container">
-    <div class="search-box">
-      <input id="search" placeholder="Enter Employee Name or ID" />
-      <button onclick="loadAttendance()">Search</button>
-    </div>
-    <div id="result"></div>
+<header>Worker Attendance Portal</header>
+<div class="container">
+  <div class="search-box">
+    <input id="search" placeholder="Enter Employee Name or ID" />
+    <button onclick="loadAttendance()">Search</button>
   </div>
-  <footer>© Attendance System</footer>
+  <div id="result"></div>
+</div>
 
 <script>
 const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRCyyGKd5jgqvz7mUUCI1DNPjMWC4CW4IZ_mfCSGRtCs7bBT0vma4zKZWwcx4Z9W9cSixg7mlji23ia/pub?gid=736929992&single=true&output=csv";
@@ -50,36 +49,50 @@ const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRCyyGKd5jgqvz7
 async function loadAttendance(){
   const key = document.getElementById('search').value.trim().toLowerCase();
   if(!key) return;
+
   const res = await fetch(CSV_URL);
   const text = await res.text();
   const rows = text.split('\n').map(r=>r.split(','));
 
-  const headers = rows[0];
-  const data = rows.slice(1);
+  const headerRow = rows[0];
+  const empIdRow = rows.find(r => r[0]==='Employee ID');
+  const nameRow = rows.find(r => r[0]==='Name');
+  const desigRow = rows.find(r => r[0]==='Designation');
 
-  let employeeRow = data.find(r => r.join(' ').toLowerCase().includes(key));
-  if(!employeeRow){
+  let colIndex = -1;
+  for(let i=1;i<empIdRow.length;i++){
+    if(empIdRow[i].toLowerCase().includes(key) || nameRow[i].toLowerCase().includes(key)){
+      colIndex = i; break;
+    }
+  }
+
+  if(colIndex === -1){
     document.getElementById('result').innerHTML = '<p>No record found</p>';
     return;
   }
 
   let html = '<div class="card">';
   html += '<div class="info">';
-  html += `<div><strong>Name:</strong> ${employeeRow[2]}</div>`;
-  html += `<div><strong>Employee ID:</strong> ${employeeRow[1]}</div>`;
-  html += `<div><strong>Designation:</strong> ${employeeRow[3]}</div>`;
+  html += `<div><strong>Name:</strong> ${nameRow[colIndex]}</div>`;
+  html += `<div><strong>Employee ID:</strong> ${empIdRow[colIndex]}</div>`;
+  html += `<div><strong>Designation:</strong> ${desigRow[colIndex]}</div>`;
   html += '</div>';
 
   html += '<div class="calendar">';
-  for(let i=4;i<headers.length;i++){
-    const val = employeeRow[i];
-    let cls = 'off';
-    if(val.includes('1')) cls='present';
-    if(val.includes('0')) cls='absent';
-    html += `<div class="day ${cls}"><div>${headers[i]}</div><div>${val}</div></div>`;
-  }
-  html += '</div></div>';
 
+  rows.forEach(r=>{
+    if(r[0].includes('Jan')){
+      const val = r[colIndex];
+      let cls='absent';
+      if(val.includes('PH')) cls='ph';
+      else if(val.includes('WO')) cls='off';
+      else if(parseInt(val)>0) cls='present';
+
+      html += `<div class="day ${cls}"><div>${r[0]}</div><div>${val}</div></div>`;
+    }
+  });
+
+  html += '</div></div>';
   document.getElementById('result').innerHTML = html;
 }
 </script>

@@ -39,19 +39,25 @@ button {
 </div>
 
 <script>
+const WEB_APP_URL =
+"https://script.google.com/macros/s/AKfycbxQsIW3F21Xi6Tcgaygl4yOeexQuMciq6r1UWGV3VgO4dev-xwwDvR2Fb4d2SgCE5979A/exec";
+
 let payroll = {};
 
-google.script.run.withSuccessHandler(loadDesignations).getDesignations();
+// Load Designations
+fetch(WEB_APP_URL + "?action=getDesignations")
+  .then(r => r.json())
+  .then(list => {
+    const d = document.getElementById("designation");
+    d.innerHTML = "<option value=''>Select Designation</option>";
+    list.forEach(x => d.innerHTML += `<option>${x}</option>`);
+  });
 
-function loadDesignations(list) {
-  const d = document.getElementById("designation");
-  d.innerHTML = "<option value=''>Select Designation</option>";
-  list.forEach(x => d.innerHTML += `<option>${x}</option>`);
-}
-
+// Load payroll on designation change
 document.getElementById("designation").addEventListener("change", function () {
-  google.script.run.withSuccessHandler(p => payroll = p)
-    .getPayrollByDesignation(this.value);
+  fetch(WEB_APP_URL + "?action=getPayroll&designation=" + this.value)
+    .then(r => r.json())
+    .then(p => payroll = p);
 });
 
 function calculate() {
@@ -64,34 +70,33 @@ function calculate() {
 
   const perDay = payroll.gross / 26;
 
-  // ✅ UPDATED LOGIC (Sunday excluded)
+  // ✅ FINAL APPROVED LOGIC
   const earnedAmount = perDay * (wd + nh + el + cl);
 
   const otAmount = ot * payroll.otRate;
   const totalEarning = earnedAmount + otAmount;
   const totalDeduction = payroll.pf + payroll.esi + payroll.pt + adv;
-
   const netPay = Math.round(totalEarning - totalDeduction);
 
   document.getElementById("out").innerHTML =
     "Net Pay : ₹ " + netPay;
 
-  google.script.run.saveSalarySlip({
+  const params = new URLSearchParams({
+    action: "saveSalary",
     name: v("name"),
     designation: v("designation"),
-    workingDays: wd,
-    otHours: ot,
-    sunday: v("sun"),
-    nh: nh,
-    el: el,
-    cl: cl,
+    wd, ot,
+    sun: v("sun"),
+    nh, el, cl,
     gross: payroll.gross,
-    otAmount: otAmount,
+    otAmount,
     pf: payroll.pf,
     esi: payroll.esi,
     pt: payroll.pt,
-    netPay: netPay
+    netPay
   });
+
+  fetch(WEB_APP_URL + "?" + params);
 }
 
 function v(id) {

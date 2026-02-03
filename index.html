@@ -41,6 +41,7 @@
     <button onclick="loadAttendance()">Search</button>
   </div>
   <div id="result"></div>
+<div id="summary"></div>
 </div>
 
 <script>
@@ -93,7 +94,17 @@ async function loadAttendance(){
   });
 
   html += '</div></div>';
-  document.getElementById('result').innerHTML = html;
+  // Summary table
+let summaryHtml = '<div class="card" style="margin-top:1rem"><h4>Attendance Summary</h4><table style="width:100%;font-size:.85rem;border-collapse:collapse">';
+const summaryRows = ['Present Days','Public Holiday','Casual Leave','Earned Leave','Weekoffs','LOP/Absent Days','Final Present Days','OT Hours'];
+summaryRows.forEach(label=>{
+  const row = rows.find(r=>r[0]===label);
+  if(row){ summaryHtml += `<tr><td style="padding:.4rem;border-bottom:1px solid #e5e7eb">${label}</td><td style="padding:.4rem;border-bottom:1px solid #e5e7eb;text-align:right">${row[colIndex]}</td></tr>`; }
+});
+summaryHtml += '</table><button onclick="downloadCard()" style="margin-top:.7rem;width:100%">Download Attendance Card</button></div>';
+
+html += summaryHtml;
+document.getElementById('result').innerHTML = html;
 }
 </script>
 </body>

@@ -3,15 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Home Budget & Market Planner</title>
+    <title>Smart Budget & Web Search</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         :root {
             --primary: #2563eb;
+            --secondary: #475569;
             --success: #22c55e;
-            --bg: #f8fafc;
+            --warning: #f59e0b;
+            --bg: #f1f5f9;
             --card: #ffffff;
-            --text: #1e293b;
         }
 
         * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
@@ -20,331 +21,313 @@
             background-color: var(--bg);
             margin: 0;
             padding: 15px;
-            color: var(--text);
-            padding-bottom: 80px; /* Space for fixed bottom bar */
+            padding-bottom: 100px;
         }
 
-        h2 { margin-top: 0; font-size: 1.25rem; text-align: center; margin-bottom: 15px; }
+        h2 { text-align: center; margin-bottom: 20px; color: var(--secondary); }
 
-        /* Input Group Styling */
-        .input-group {
-            margin-bottom: 15px;
+        /* --- SEARCH SECTION --- */
+        .card {
             background: var(--card);
-            padding: 15px;
-            border-radius: 12px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            padding: 20px;
+            border-radius: 16px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
         }
 
-        label { display: block; font-size: 0.85rem; color: #64748b; margin-bottom: 5px; font-weight: 600; }
+        .input-row { display: flex; gap: 10px; margin-bottom: 15px; }
         
-        input, select, button {
-            width: 100%;
+        input, button {
             padding: 12px;
             border: 1px solid #cbd5e1;
             border-radius: 8px;
             font-size: 1rem;
-            margin-bottom: 10px;
+            width: 100%;
         }
-
+        
         input:focus { outline: 2px solid var(--primary); border-color: transparent; }
 
-        /* Search Results Dropdown */
-        #searchResults {
-            max-height: 150px;
-            overflow-y: auto;
-            border: 1px solid #e2e8f0;
-            margin-top: -10px;
-            margin-bottom: 10px;
-            display: none;
-            background: white;
-            border-radius: 0 0 8px 8px;
-        }
+        .search-container { position: relative; }
 
-        .search-item {
+        /* Web Search Buttons */
+        .web-search-box {
+            background: #f8fafc;
+            border: 1px dashed #94a3b8;
             padding: 10px;
-            border-bottom: 1px solid #f1f5f9;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            display: none; /* Hidden by default */
+        }
+
+        .web-btn {
+            background: white;
+            border: 1px solid #e2e8f0;
+            margin-bottom: 8px;
+            text-align: left;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.9rem;
+            color: var(--secondary);
             cursor: pointer;
         }
-        .search-item:hover { background-color: #f1f5f9; }
+        .web-btn:hover { background: #f1f5f9; border-color: var(--primary); color: var(--primary); }
+        .web-icon { font-size: 1.2rem; margin-right: 10px; }
 
-        /* Rate Display */
-        .rate-display {
-            background: #eff6ff;
-            color: var(--primary);
-            padding: 8px;
-            border-radius: 6px;
-            font-size: 0.9rem;
-            margin-bottom: 10px;
+        /* Rate Suggestion */
+        .suggestion-box {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            z-index: 10;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            max-height: 200px;
+            overflow-y: auto;
             display: none;
         }
+        .suggestion-item { padding: 12px; border-bottom: 1px solid #f1f5f9; cursor: pointer; }
+        
+        /* Action Buttons */
+        .btn-add { background: var(--primary); color: white; border: none; font-weight: 700; }
+        .btn-check-web { background: var(--secondary); color: white; border: none; font-weight: 600; margin-top: 10px;}
 
-        /* Add Button */
-        .btn-add {
-            background-color: var(--primary);
-            color: white;
-            border: none;
-            font-weight: bold;
-            cursor: pointer;
-        }
-
-        /* Shopping List Area */
-        #shoppingListCard {
+        /* --- LIST SECTION --- */
+        #receiptCard {
             background: white;
             padding: 20px;
-            border-radius: 0; /* Square corners for better receipt look */
-            margin-top: 20px;
             border: 1px solid #e2e8f0;
-        }
-
-        .list-header {
-            display: flex;
-            justify-content: space-between;
-            border-bottom: 2px dashed #cbd5e1;
-            padding-bottom: 10px;
-            margin-bottom: 10px;
+            position: relative;
         }
 
         .list-item {
             display: flex;
             justify-content: space-between;
-            padding: 8px 0;
-            border-bottom: 1px solid #f1f5f9;
-            font-size: 0.95rem;
+            padding: 10px 0;
+            border-bottom: 1px dotted #cbd5e1;
         }
 
-        .item-details { flex-grow: 1; }
-        .item-price { font-weight: bold; min-width: 60px; text-align: right; }
-        
-        .delete-btn {
-            color: red;
-            margin-left: 10px;
-            cursor: pointer;
-            font-size: 0.8rem;
-            border: none;
-            background: none;
-            padding: 0;
-            width: auto;
-        }
-
-        .total-section {
-            margin-top: 15px;
-            padding-top: 10px;
-            border-top: 2px dashed #cbd5e1;
+        .total-row {
             display: flex;
             justify-content: space-between;
+            margin-top: 20px;
             font-size: 1.2rem;
             font-weight: 800;
+            border-top: 2px solid #0f172a;
+            padding-top: 10px;
         }
 
-        /* Floating Checkout Button */
-        .checkout-container {
+        /* Fixed Bottom Bar */
+        .bottom-bar {
             position: fixed;
-            bottom: 0;
-            left: 0;
-            width: 100%;
+            bottom: 0; left: 0; width: 100%;
             padding: 15px;
             background: white;
-            box-shadow: 0 -4px 6px rgba(0,0,0,0.05);
+            box-shadow: 0 -4px 10px rgba(0,0,0,0.05);
             display: flex;
-            gap: 10px;
             z-index: 100;
         }
+        .btn-download { background: var(--success); color: white; font-weight: bold; border: none; }
 
-        .btn-checkout {
-            background-color: var(--success);
-            color: white;
-            border: none;
-            font-weight: bold;
-            margin: 0;
-        }
-
-        /* Utility */
-        .hidden { display: none; }
     </style>
 </head>
 <body>
 
-    <h2>🏠 Daily Budget Planner</h2>
+    <h2>🛒 Smart Market App</h2>
 
-    <div class="input-group">
-        <label>Search Item</label>
-        <input type="text" id="itemSearch" placeholder="Type (e.g., Potato, Milk)..." autocomplete="off">
-        <div id="searchResults"></div>
+    <div class="card">
+        <div class="search-container">
+            <label style="font-size: 0.85rem; font-weight: bold; color:#64748b;">ITEM NAME</label>
+            <input type="text" id="itemName" placeholder="Type item (e.g. Sony TV, Milk)..." autocomplete="off">
+            <div id="localSuggestions" class="suggestion-box"></div>
+        </div>
 
-        <div id="rateSuggestion" class="rate-display"></div>
+        <div id="webSearchPanel" class="web-search-box">
+            <p style="margin: 0 0 10px 0; font-size: 0.85rem; color: #64748b;">Not sure about price or stock? Check online:</p>
+            
+            <button class="web-btn" onclick="searchWeb('shopping')">
+                <span>🛍️ Compare Prices (Google Shopping)</span> <span>↗</span>
+            </button>
+            <button class="web-btn" onclick="searchWeb('maps')">
+                <span>📍 Find in Local Stores (Near Me)</span> <span>↗</span>
+            </button>
+            <button class="web-btn" onclick="searchWeb('amazon')">
+                <span>📦 Search on Amazon</span> <span>↗</span>
+            </button>
+        </div>
 
-        <div style="display: flex; gap: 10px;">
-            <div style="flex: 1;">
-                <label>Qty</label>
+        <div class="input-row" style="margin-top: 15px;">
+            <div style="flex:1">
+                <label style="font-size: 0.85rem; font-weight: bold; color:#64748b;">QTY</label>
                 <input type="number" id="itemQty" placeholder="1">
             </div>
-            <div style="flex: 1;">
-                <label>Price</label>
-                <input type="number" id="itemPrice" placeholder="0.00">
+            <div style="flex:1">
+                <label style="font-size: 0.85rem; font-weight: bold; color:#64748b;">RATE</label>
+                <input type="number" id="itemRate" placeholder="0.00">
             </div>
         </div>
 
-        <button class="btn-add" onclick="addItem()">+ Add to List</button>
+        <button class="btn-add" onclick="addItem()">+ ADD TO LIST</button>
     </div>
 
-    <div id="shoppingListCard">
-        <div class="list-header">
-            <span><strong>SHOPPING LIST</strong></span>
-            <span id="dateDisplay"></span>
-        </div>
-        
-        <div id="listContainer">
-            <div style="text-align: center; color: #94a3b8; padding: 20px;">List is empty</div>
+    <div id="receiptCard">
+        <div style="text-align: center; border-bottom: 2px dashed #ccc; padding-bottom: 10px; margin-bottom: 10px;">
+            <h3 style="margin:0;">SHOPPING LIST</h3>
+            <span id="dateTag" style="font-size: 0.8rem; color: #666;"></span>
         </div>
 
-        <div class="total-section">
+        <div id="listItems">
+            <p style="text-align: center; color: #ccc;">No items yet.</p>
+        </div>
+
+        <div class="total-row">
             <span>TOTAL</span>
-            <span id="grandTotal">$0.00</span>
+            <span id="grandTotal">0.00</span>
         </div>
     </div>
 
-    <div class="checkout-container">
-        <button class="btn-checkout" onclick="downloadJPEG()">📸 Checkout & Download HD JPEG</button>
+    <div class="bottom-bar">
+        <button class="btn-download" onclick="downloadReceipt()">📸 SAVE HD LIST</button>
     </div>
 
     <script>
-        // --- 1. Database of Items & Market Rates ---
-        // You can expand this list easily
-        const itemDatabase = [
-            { name: "Potato", rate: 30, unit: "kg" },
-            { name: "Onion", rate: 45, unit: "kg" },
-            { name: "Tomato", rate: 60, unit: "kg" },
-            { name: "Milk", rate: 65, unit: "L" },
-            { name: "Bread", rate: 40, unit: "pkt" },
-            { name: "Eggs", rate: 7, unit: "pc" },
-            { name: "Rice (Basmati)", rate: 120, unit: "kg" },
-            { name: "Sugar", rate: 42, unit: "kg" },
-            { name: "Oil (Cooking)", rate: 150, unit: "L" },
-            { name: "Cilantro/Dhaniya", rate: 20, unit: "bunch" }
+        // --- DATA: Local Market Rates (Editable) ---
+        const marketDb = [
+            { name: "Potato", rate: 30 },
+            { name: "Onion", rate: 45 },
+            { name: "Tomato", rate: 60 },
+            { name: "Milk", rate: 66 },
+            { name: "Eggs (Dozen)", rate: 84 },
+            { name: "Bread", rate: 40 },
+            { name: "Chicken", rate: 220 },
+            { name: "Rice", rate: 90 },
         ];
 
-        let shoppingList = [];
-        
-        // Set Date
-        document.getElementById('dateDisplay').innerText = new Date().toLocaleDateString();
+        let cart = [];
+        document.getElementById('dateTag').innerText = new Date().toLocaleDateString();
 
-        // --- 2. Search Logic ---
-        const searchInput = document.getElementById('itemSearch');
-        const resultsBox = document.getElementById('searchResults');
-        const rateDisplay = document.getElementById('rateSuggestion');
-        const priceInput = document.getElementById('itemPrice');
+        // --- 1. SMART SEARCH LOGIC ---
+        const nameInput = document.getElementById('itemName');
+        const webPanel = document.getElementById('webSearchPanel');
+        const suggestBox = document.getElementById('localSuggestions');
+        const rateInput = document.getElementById('itemRate');
 
-        searchInput.addEventListener('input', (e) => {
-            const val = e.target.value.toLowerCase();
-            resultsBox.innerHTML = '';
+        nameInput.addEventListener('input', (e) => {
+            const val = e.target.value;
             
-            if (val.length < 1) {
-                resultsBox.style.display = 'none';
-                return;
+            // Show Web Search Options if text exists
+            if (val.length > 1) {
+                webPanel.style.display = 'block';
+            } else {
+                webPanel.style.display = 'none';
+                suggestBox.style.display = 'none';
             }
 
-            const matches = itemDatabase.filter(i => i.name.toLowerCase().includes(val));
+            // Local DB Auto-complete
+            const matches = marketDb.filter(i => i.name.toLowerCase().includes(val.toLowerCase()));
+            suggestBox.innerHTML = '';
             
-            if (matches.length > 0) {
-                resultsBox.style.display = 'block';
+            if (matches.length > 0 && val.length > 0) {
+                suggestBox.style.display = 'block';
                 matches.forEach(item => {
                     const div = document.createElement('div');
-                    div.className = 'search-item';
-                    div.innerHTML = `<strong>${item.name}</strong> <span style="color:#64748b">(@ ${item.rate}/${item.unit})</span>`;
-                    div.onclick = () => selectItem(item);
-                    resultsBox.appendChild(div);
+                    div.className = 'suggestion-item';
+                    div.innerHTML = `<strong>${item.name}</strong> <span style="color:green">~${item.rate}</span>`;
+                    div.onclick = () => {
+                        nameInput.value = item.name;
+                        rateInput.value = item.rate;
+                        suggestBox.style.display = 'none';
+                        // Keep web search open in case they still want to check
+                    };
+                    suggestBox.appendChild(div);
                 });
-            } else {
-                resultsBox.style.display = 'none';
             }
         });
 
-        function selectItem(item) {
-            searchInput.value = item.name;
-            priceInput.value = item.rate; // Auto-fill suggested rate
-            rateDisplay.style.display = 'block';
-            rateDisplay.innerText = `💡 Market Rate: ${item.rate} per ${item.unit}`;
-            resultsBox.style.display = 'none';
-            document.getElementById('itemQty').focus();
-        }
+        // --- 2. WEB SEARCH FUNCTIONS ---
+        function searchWeb(type) {
+            const query = nameInput.value;
+            if (!query) return alert("Type an item name first!");
 
-        // --- 3. Cart Logic ---
-        function addItem() {
-            const name = searchInput.value;
-            const qty = parseFloat(document.getElementById('itemQty').value);
-            const price = parseFloat(priceInput.value);
-
-            if (!name || !qty || !price) {
-                alert("Please fill all fields");
-                return;
+            let url = "";
+            if (type === 'shopping') {
+                // Google Shopping Search
+                url = `https://www.google.com/search?tbm=shop&q=${encodeURIComponent(query)}`;
+            } else if (type === 'maps') {
+                // Google Maps "Near Me" Search
+                url = `https://www.google.com/maps/search/${encodeURIComponent(query)}+near+me`;
+            } else if (type === 'amazon') {
+                // Amazon Search
+                url = `https://www.amazon.com/s?k=${encodeURIComponent(query)}`;
             }
-
-            const total = qty * price;
-
-            shoppingList.push({ name, qty, price, total });
-            renderList();
             
-            // Reset inputs
-            searchInput.value = '';
+            window.open(url, '_blank');
+        }
+
+        // --- 3. CART & DOWNLOAD FUNCTIONS ---
+        function addItem() {
+            const name = nameInput.value;
+            const qty = parseFloat(document.getElementById('itemQty').value);
+            const rate = parseFloat(rateInput.value);
+
+            if (!name || !qty || !rate) return alert("Please fill details");
+
+            cart.push({ name, qty, rate, total: qty * rate });
+            renderCart();
+            
+            // Clear inputs
+            nameInput.value = '';
             document.getElementById('itemQty').value = '';
-            priceInput.value = '';
-            rateDisplay.style.display = 'none';
+            rateInput.value = '';
+            webPanel.style.display = 'none';
         }
 
-        function deleteItem(index) {
-            shoppingList.splice(index, 1);
-            renderList();
-        }
-
-        function renderList() {
-            const container = document.getElementById('listContainer');
+        function renderCart() {
+            const container = document.getElementById('listItems');
             const totalEl = document.getElementById('grandTotal');
             container.innerHTML = '';
+            let sum = 0;
 
-            let grandTotal = 0;
-
-            if (shoppingList.length === 0) {
-                container.innerHTML = '<div style="text-align: center; color: #94a3b8; padding: 20px;">List is empty</div>';
-                totalEl.innerText = "0.00";
-                return;
-            }
-
-            shoppingList.forEach((item, index) => {
-                grandTotal += item.total;
+            cart.forEach((item, idx) => {
+                sum += item.total;
                 const div = document.createElement('div');
                 div.className = 'list-item';
                 div.innerHTML = `
-                    <div class="item-details">
+                    <div>
                         <strong>${item.name}</strong><br>
-                        <small>${item.qty} x ${item.price}</small>
+                        <small style="color:#666">${item.qty} x ${item.rate}</small>
                     </div>
-                    <div class="item-price">
-                        ${item.total.toFixed(2)}
-                        <button class="delete-btn" onclick="deleteItem(${index})">✕</button>
+                    <div style="text-align:right">
+                        <div>${item.total.toFixed(2)}</div>
+                        <small style="color:red; cursor:pointer" onclick="removeItem(${idx})">Remove</small>
                     </div>
                 `;
                 container.appendChild(div);
             });
-
-            totalEl.innerText = grandTotal.toFixed(2);
+            
+            if(cart.length === 0) container.innerHTML = '<p style="text-align: center; color: #ccc;">No items yet.</p>';
+            totalEl.innerText = sum.toFixed(2);
         }
 
-        // --- 4. HD JPEG Download Logic ---
-        function downloadJPEG() {
-            const element = document.getElementById('shoppingListCard');
-            const btn = document.querySelector('.btn-checkout');
+        function removeItem(idx) {
+            cart.splice(idx, 1);
+            renderCart();
+        }
+
+        function downloadReceipt() {
+            const element = document.getElementById('receiptCard');
+            const btn = document.querySelector('.btn-download');
+            btn.innerText = "Processing...";
             
-            // Visual feedback
-            btn.innerText = "Generating...";
-            
-            // Use html2canvas with scale: 3 for HD quality
-            html2canvas(element, { scale: 3, backgroundColor: "#ffffff" }).then(canvas => {
+            html2canvas(element, { scale: 3 }).then(canvas => {
                 const link = document.createElement('a');
-                link.download = `Budget_List_${Date.now()}.jpg`;
-                link.href = canvas.toDataURL("image/jpeg", 0.9); // 0.9 quality
+                link.download = `Shopping_List_${Date.now()}.jpg`;
+                link.href = canvas.toDataURL("image/jpeg", 0.9);
                 link.click();
-                
-                btn.innerText = "📸 Checkout & Download HD JPEG";
+                btn.innerText = "📸 SAVE HD LIST";
             });
         }
     </script>

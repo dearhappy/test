@@ -1,123 +1,352 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Worker Attendance Portal</title>
-  <style>
-    :root{
-      --primary:#1f2937;--accent:#2563eb;--bg:#f8fafc;--card:#ffffff;
-      --present:#16a34a;--absent:#dc2626;--off:#6b7280;--ph:#9333ea;
-    }
-    *{box-sizing:border-box;font-family:system-ui,-apple-system,Segoe UI,Roboto}
-    body{margin:0;background:var(--bg);color:var(--primary)}
-    header{padding:1rem;text-align:center;font-weight:700;font-size:1.1rem}
-    .container{max-width:1100px;margin:auto;padding:1rem}
-    .search-box{display:flex;gap:.5rem;margin-bottom:1rem}
-    input{flex:1;padding:.7rem;border-radius:.5rem;border:1px solid #d1d5db}
-    button{padding:.7rem 1rem;border:none;border-radius:.5rem;background:var(--accent);color:#fff;font-weight:600;cursor:pointer}
-    button:disabled{opacity:.6;cursor:not-allowed}
-    .card{background:var(--card);border-radius:1rem;padding:1rem;box-shadow:0 8px 20px rgba(0,0,0,.06);overflow:hidden}
-    .info{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:1rem}
-    .calendar{display:grid;grid-template-columns:repeat(7,1fr);gap:.4rem}
-    .day{padding:.5rem;border-radius:.5rem;text-align:center;font-size:.72rem;word-wrap:break-word}
-    .present{background:#dcfce7;color:var(--present)}
-    .absent{background:#fee2e2;color:var(--absent)}
-    .off{background:#e5e7eb;color:var(--off)}
-    .ph{background:#f3e8ff;color:var(--ph)}
-    table{width:100%;border-collapse:collapse}
-    td{padding:.45rem;border-bottom:1px solid #e5e7eb;font-size:.85rem}
-    @media(max-width:600px){.info{grid-template-columns:1fr}.calendar{grid-template-columns:repeat(4,1fr)}}
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Home Budget & Market Planner</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --success: #22c55e;
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --text: #1e293b;
+        }
+
+        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+
+        body {
+            background-color: var(--bg);
+            margin: 0;
+            padding: 15px;
+            color: var(--text);
+            padding-bottom: 80px; /* Space for fixed bottom bar */
+        }
+
+        h2 { margin-top: 0; font-size: 1.25rem; text-align: center; margin-bottom: 15px; }
+
+        /* Input Group Styling */
+        .input-group {
+            margin-bottom: 15px;
+            background: var(--card);
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        label { display: block; font-size: 0.85rem; color: #64748b; margin-bottom: 5px; font-weight: 600; }
+        
+        input, select, button {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 1rem;
+            margin-bottom: 10px;
+        }
+
+        input:focus { outline: 2px solid var(--primary); border-color: transparent; }
+
+        /* Search Results Dropdown */
+        #searchResults {
+            max-height: 150px;
+            overflow-y: auto;
+            border: 1px solid #e2e8f0;
+            margin-top: -10px;
+            margin-bottom: 10px;
+            display: none;
+            background: white;
+            border-radius: 0 0 8px 8px;
+        }
+
+        .search-item {
+            padding: 10px;
+            border-bottom: 1px solid #f1f5f9;
+            cursor: pointer;
+        }
+        .search-item:hover { background-color: #f1f5f9; }
+
+        /* Rate Display */
+        .rate-display {
+            background: #eff6ff;
+            color: var(--primary);
+            padding: 8px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+            display: none;
+        }
+
+        /* Add Button */
+        .btn-add {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        /* Shopping List Area */
+        #shoppingListCard {
+            background: white;
+            padding: 20px;
+            border-radius: 0; /* Square corners for better receipt look */
+            margin-top: 20px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .list-header {
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 2px dashed #cbd5e1;
+            padding-bottom: 10px;
+            margin-bottom: 10px;
+        }
+
+        .list-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 0.95rem;
+        }
+
+        .item-details { flex-grow: 1; }
+        .item-price { font-weight: bold; min-width: 60px; text-align: right; }
+        
+        .delete-btn {
+            color: red;
+            margin-left: 10px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            border: none;
+            background: none;
+            padding: 0;
+            width: auto;
+        }
+
+        .total-section {
+            margin-top: 15px;
+            padding-top: 10px;
+            border-top: 2px dashed #cbd5e1;
+            display: flex;
+            justify-content: space-between;
+            font-size: 1.2rem;
+            font-weight: 800;
+        }
+
+        /* Floating Checkout Button */
+        .checkout-container {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            padding: 15px;
+            background: white;
+            box-shadow: 0 -4px 6px rgba(0,0,0,0.05);
+            display: flex;
+            gap: 10px;
+            z-index: 100;
+        }
+
+        .btn-checkout {
+            background-color: var(--success);
+            color: white;
+            border: none;
+            font-weight: bold;
+            margin: 0;
+        }
+
+        /* Utility */
+        .hidden { display: none; }
+    </style>
 </head>
 <body>
-<header>Worker Attendance Portal</header>
-<div class="container">
-  <div class="search-box" id="searchBox">
-    <input id="search" placeholder="Enter Employee Name or ID" />
-    <button id="searchBtn" onclick="loadAttendance()">Search</button>
-  </div>
-  <div id="result"></div>
-</div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script>
-const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRCyyGKd5jgqvz7mUUCI1DNPjMWC4CW4IZ_mfCSGRtCs7bBT0vma4zKZWwcx4Z9W9cSixg7mlji23ia/pub?gid=736929992&single=true&output=csv";
+    <h2>🏠 Daily Budget Planner</h2>
 
-async function loadAttendance(){
-  const btn=document.getElementById('searchBtn');
-  btn.disabled=true;
-  document.getElementById('searchBox').style.display='none';
+    <div class="input-group">
+        <label>Search Item</label>
+        <input type="text" id="itemSearch" placeholder="Type (e.g., Potato, Milk)..." autocomplete="off">
+        <div id="searchResults"></div>
 
-  const key=document.getElementById('search').value.trim().toLowerCase();
-  if(!key) return;
+        <div id="rateSuggestion" class="rate-display"></div>
 
-  const res=await fetch(CSV_URL);
-  const text=await res.text();
-  const rows=text.split('\n').map(r=>r.split(','));
+        <div style="display: flex; gap: 10px;">
+            <div style="flex: 1;">
+                <label>Qty</label>
+                <input type="number" id="itemQty" placeholder="1">
+            </div>
+            <div style="flex: 1;">
+                <label>Price</label>
+                <input type="number" id="itemPrice" placeholder="0.00">
+            </div>
+        </div>
 
-  const empIdRow=rows.find(r=>r[0]==='Employee ID');
-  const nameRow=rows.find(r=>r[0]==='Name');
-  const desigRow=rows.find(r=>r[0]==='Designation');
+        <button class="btn-add" onclick="addItem()">+ Add to List</button>
+    </div>
 
-  let colIndex=-1;
-  for(let i=1;i<empIdRow.length;i++){
-    if(empIdRow[i].toLowerCase().includes(key)||nameRow[i].toLowerCase().includes(key)){
-      colIndex=i;break;
-    }
-  }
+    <div id="shoppingListCard">
+        <div class="list-header">
+            <span><strong>SHOPPING LIST</strong></span>
+            <span id="dateDisplay"></span>
+        </div>
+        
+        <div id="listContainer">
+            <div style="text-align: center; color: #94a3b8; padding: 20px;">List is empty</div>
+        </div>
 
-  if(colIndex===-1){
-    document.getElementById('result').innerHTML='<p>No record found</p>';
-    return;
-  }
+        <div class="total-section">
+            <span>TOTAL</span>
+            <span id="grandTotal">$0.00</span>
+        </div>
+    </div>
 
-  let html='<div class="card" id="attendanceCard">';
-  html+='<div class="info">';
-  html+=`<div><strong>Name:</strong> ${nameRow[colIndex]}</div>`;
-  html+=`<div><strong>Employee ID:</strong> ${empIdRow[colIndex]}</div>`;
-  html+=`<div><strong>Designation:</strong> ${desigRow[colIndex]}</div>`;
-  html+='</div>';
+    <div class="checkout-container">
+        <button class="btn-checkout" onclick="downloadJPEG()">📸 Checkout & Download HD JPEG</button>
+    </div>
 
-  html+='<div class="calendar">';
-  rows.forEach(r=>{
-    if(/Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec/.test(r[0])){
-      const val=r[colIndex]||'';
-      let cls='absent';
-      if(val.includes('PH')) cls='ph';
-      else if(val.includes('WO')) cls='off';
-      else if(parseInt(val)>0) cls='present';
-      html+=`<div class="day ${cls}"><div>${r[0]}</div><div>${val}</div></div>`;
-    }
-  });
-  html+='</div>';
+    <script>
+        // --- 1. Database of Items & Market Rates ---
+        // You can expand this list easily
+        const itemDatabase = [
+            { name: "Potato", rate: 30, unit: "kg" },
+            { name: "Onion", rate: 45, unit: "kg" },
+            { name: "Tomato", rate: 60, unit: "kg" },
+            { name: "Milk", rate: 65, unit: "L" },
+            { name: "Bread", rate: 40, unit: "pkt" },
+            { name: "Eggs", rate: 7, unit: "pc" },
+            { name: "Rice (Basmati)", rate: 120, unit: "kg" },
+            { name: "Sugar", rate: 42, unit: "kg" },
+            { name: "Oil (Cooking)", rate: 150, unit: "L" },
+            { name: "Cilantro/Dhaniya", rate: 20, unit: "bunch" }
+        ];
 
-  const summaryRows=['Present Days','Public Holiday','Casual Leave','Earned Leave','Weekoffs','LOP/Absent Days','Final Present Days','OT Hours'];
-  html+='<div class="card" style="margin-top:1rem">';
-  html+='<h4>Attendance Summary</h4><table>';
-  summaryRows.forEach(label=>{
-    const row=rows.find(r=>r[0]===label);
-    if(row){html+=`<tr><td>${label}</td><td style="text-align:right">${row[colIndex]}</td></tr>`;}
-  });
-  html+='</table>';
-  html+='<button id="downloadBtn" style="margin-top:.7rem;width:100%" onclick="downloadCard()">Download Attendance Card</button>';
-  html+='</div></div>';
+        let shoppingList = [];
+        
+        // Set Date
+        document.getElementById('dateDisplay').innerText = new Date().toLocaleDateString();
 
-  document.getElementById('result').innerHTML=html;
-}
+        // --- 2. Search Logic ---
+        const searchInput = document.getElementById('itemSearch');
+        const resultsBox = document.getElementById('searchResults');
+        const rateDisplay = document.getElementById('rateSuggestion');
+        const priceInput = document.getElementById('itemPrice');
 
-function downloadCard(){
-  const btn=document.getElementById('downloadBtn');
-  btn.disabled=true;
-  const card=document.getElementById('attendanceCard');
-  html2canvas(card,{scale:3,useCORS:true}).then(canvas=>{
-    const link=document.createElement('a');
-    link.download='Attendance_Card_HD.jpg';
-    link.href=canvas.toDataURL('image/jpeg',1.0);
-    link.click();
-    btn.disabled=false;
-  });
-}
-</script>
+        searchInput.addEventListener('input', (e) => {
+            const val = e.target.value.toLowerCase();
+            resultsBox.innerHTML = '';
+            
+            if (val.length < 1) {
+                resultsBox.style.display = 'none';
+                return;
+            }
+
+            const matches = itemDatabase.filter(i => i.name.toLowerCase().includes(val));
+            
+            if (matches.length > 0) {
+                resultsBox.style.display = 'block';
+                matches.forEach(item => {
+                    const div = document.createElement('div');
+                    div.className = 'search-item';
+                    div.innerHTML = `<strong>${item.name}</strong> <span style="color:#64748b">(@ ${item.rate}/${item.unit})</span>`;
+                    div.onclick = () => selectItem(item);
+                    resultsBox.appendChild(div);
+                });
+            } else {
+                resultsBox.style.display = 'none';
+            }
+        });
+
+        function selectItem(item) {
+            searchInput.value = item.name;
+            priceInput.value = item.rate; // Auto-fill suggested rate
+            rateDisplay.style.display = 'block';
+            rateDisplay.innerText = `💡 Market Rate: ${item.rate} per ${item.unit}`;
+            resultsBox.style.display = 'none';
+            document.getElementById('itemQty').focus();
+        }
+
+        // --- 3. Cart Logic ---
+        function addItem() {
+            const name = searchInput.value;
+            const qty = parseFloat(document.getElementById('itemQty').value);
+            const price = parseFloat(priceInput.value);
+
+            if (!name || !qty || !price) {
+                alert("Please fill all fields");
+                return;
+            }
+
+            const total = qty * price;
+
+            shoppingList.push({ name, qty, price, total });
+            renderList();
+            
+            // Reset inputs
+            searchInput.value = '';
+            document.getElementById('itemQty').value = '';
+            priceInput.value = '';
+            rateDisplay.style.display = 'none';
+        }
+
+        function deleteItem(index) {
+            shoppingList.splice(index, 1);
+            renderList();
+        }
+
+        function renderList() {
+            const container = document.getElementById('listContainer');
+            const totalEl = document.getElementById('grandTotal');
+            container.innerHTML = '';
+
+            let grandTotal = 0;
+
+            if (shoppingList.length === 0) {
+                container.innerHTML = '<div style="text-align: center; color: #94a3b8; padding: 20px;">List is empty</div>';
+                totalEl.innerText = "0.00";
+                return;
+            }
+
+            shoppingList.forEach((item, index) => {
+                grandTotal += item.total;
+                const div = document.createElement('div');
+                div.className = 'list-item';
+                div.innerHTML = `
+                    <div class="item-details">
+                        <strong>${item.name}</strong><br>
+                        <small>${item.qty} x ${item.price}</small>
+                    </div>
+                    <div class="item-price">
+                        ${item.total.toFixed(2)}
+                        <button class="delete-btn" onclick="deleteItem(${index})">✕</button>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+
+            totalEl.innerText = grandTotal.toFixed(2);
+        }
+
+        // --- 4. HD JPEG Download Logic ---
+        function downloadJPEG() {
+            const element = document.getElementById('shoppingListCard');
+            const btn = document.querySelector('.btn-checkout');
+            
+            // Visual feedback
+            btn.innerText = "Generating...";
+            
+            // Use html2canvas with scale: 3 for HD quality
+            html2canvas(element, { scale: 3, backgroundColor: "#ffffff" }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = `Budget_List_${Date.now()}.jpg`;
+                link.href = canvas.toDataURL("image/jpeg", 0.9); // 0.9 quality
+                link.click();
+                
+                btn.innerText = "📸 Checkout & Download HD JPEG";
+            });
+        }
+    </script>
 </body>
 </html>

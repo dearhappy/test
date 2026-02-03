@@ -4,167 +4,118 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Worker Attendance Portal</title>
-
-  <!-- html2canvas for HD JPEG download -->
-  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-
   <style>
     :root{
-      --primary:#1f2937;
-      --accent:#2563eb;
-      --bg:#f8fafc;
-      --card:#ffffff;
-      --present:#16a34a;
-      --absent:#dc2626;
-      --off:#6b7280;
-      --ph:#9333ea;
+      --primary:#1f2937;--accent:#2563eb;--bg:#f8fafc;--card:#ffffff;
+      --present:#16a34a;--absent:#dc2626;--off:#6b7280;--ph:#9333ea;
     }
     *{box-sizing:border-box;font-family:system-ui,-apple-system,Segoe UI,Roboto}
     body{margin:0;background:var(--bg);color:var(--primary)}
     header{padding:1rem;text-align:center;font-weight:700;font-size:1.1rem}
-    .container{max-width:1000px;margin:auto;padding:1rem}
+    .container{max-width:1100px;margin:auto;padding:1rem}
     .search-box{display:flex;gap:.5rem;margin-bottom:1rem}
     input{flex:1;padding:.7rem;border-radius:.5rem;border:1px solid #d1d5db}
-    button{padding:.7rem 1rem;border:none;border-radius:.5rem;background:var(--accent);color:#fff;font-weight:600}
+    button{padding:.7rem 1rem;border:none;border-radius:.5rem;background:var(--accent);color:#fff;font-weight:600;cursor:pointer}
     button:disabled{opacity:.6;cursor:not-allowed}
-    .card{background:var(--card);border-radius:1rem;padding:1rem;box-shadow:0 8px 20px rgba(0,0,0,.06)}
+    .card{background:var(--card);border-radius:1rem;padding:1rem;box-shadow:0 8px 20px rgba(0,0,0,.06);overflow:hidden}
     .info{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:1rem}
-    .calendar{display:grid;grid-template-columns:repeat(7,1fr);gap:.5rem}
-    .day{padding:.6rem;border-radius:.5rem;text-align:center;font-size:.75rem}
+    .calendar{display:grid;grid-template-columns:repeat(7,1fr);gap:.4rem}
+    .day{padding:.5rem;border-radius:.5rem;text-align:center;font-size:.72rem;word-wrap:break-word}
     .present{background:#dcfce7;color:var(--present)}
     .absent{background:#fee2e2;color:var(--absent)}
     .off{background:#e5e7eb;color:var(--off)}
     .ph{background:#f3e8ff;color:var(--ph)}
-    @media(max-width:600px){.info{grid-template-columns:1fr}}
+    table{width:100%;border-collapse:collapse}
+    td{padding:.45rem;border-bottom:1px solid #e5e7eb;font-size:.85rem}
+    @media(max-width:600px){.info{grid-template-columns:1fr}.calendar{grid-template-columns:repeat(4,1fr)}}
   </style>
 </head>
-
 <body>
 <header>Worker Attendance Portal</header>
-
 <div class="container">
-  <div class="search-box">
+  <div class="search-box" id="searchBox">
     <input id="search" placeholder="Enter Employee Name or ID" />
-    <button onclick="loadAttendance()">Search</button>
+    <button id="searchBtn" onclick="loadAttendance()">Search</button>
   </div>
-
-  <!-- This wrapper is important for JPEG capture -->
-  <div id="attendanceCard"></div>
+  <div id="result"></div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script>
-const CSV_URL =
-"https://docs.google.com/spreadsheets/d/e/2PACX-1vRCyyGKd5jgqvz7mUUCI1DNPjMWC4CW4IZ_mfCSGRtCs7bBT0vma4zKZWwcx4Z9W9cSixg7mlji23ia/pub?gid=736929992&single=true&output=csv";
+const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRCyyGKd5jgqvz7mUUCI1DNPjMWC4CW4IZ_mfCSGRtCs7bBT0vma4zKZWwcx4Z9W9cSixg7mlji23ia/pub?gid=736929992&single=true&output=csv";
 
 async function loadAttendance(){
-  const key = document.getElementById('search').value.trim().toLowerCase();
+  const btn=document.getElementById('searchBtn');
+  btn.disabled=true;
+  document.getElementById('searchBox').style.display='none';
+
+  const key=document.getElementById('search').value.trim().toLowerCase();
   if(!key) return;
 
-  const res = await fetch(CSV_URL);
-  const text = await res.text();
-  const rows = text.split('\n').map(r=>r.split(','));
+  const res=await fetch(CSV_URL);
+  const text=await res.text();
+  const rows=text.split('\n').map(r=>r.split(','));
 
-  const empIdRow = rows.find(r => r[0]==='Employee ID');
-  const nameRow  = rows.find(r => r[0]==='Name');
-  const desigRow = rows.find(r => r[0]==='Designation');
+  const empIdRow=rows.find(r=>r[0]==='Employee ID');
+  const nameRow=rows.find(r=>r[0]==='Name');
+  const desigRow=rows.find(r=>r[0]==='Designation');
 
-  let colIndex = -1;
+  let colIndex=-1;
   for(let i=1;i<empIdRow.length;i++){
-    if(
-      empIdRow[i].toLowerCase().includes(key) ||
-      nameRow[i].toLowerCase().includes(key)
-    ){
-      colIndex = i;
-      break;
+    if(empIdRow[i].toLowerCase().includes(key)||nameRow[i].toLowerCase().includes(key)){
+      colIndex=i;break;
     }
   }
 
-  if(colIndex === -1){
-    document.getElementById('attendanceCard').innerHTML = '<p>No record found</p>';
+  if(colIndex===-1){
+    document.getElementById('result').innerHTML='<p>No record found</p>';
     return;
   }
 
-  let html = `
-  <div class="card" id="cardContent">
-    <div class="info">
-      <div><strong>Name:</strong> ${nameRow[colIndex]}</div>
-      <div><strong>Employee ID:</strong> ${empIdRow[colIndex]}</div>
-      <div><strong>Designation:</strong> ${desigRow[colIndex]}</div>
-    </div>
+  let html='<div class="card" id="attendanceCard">';
+  html+='<div class="info">';
+  html+=`<div><strong>Name:</strong> ${nameRow[colIndex]}</div>`;
+  html+=`<div><strong>Employee ID:</strong> ${empIdRow[colIndex]}</div>`;
+  html+=`<div><strong>Designation:</strong> ${desigRow[colIndex]}</div>`;
+  html+='</div>';
 
-    <div class="calendar">`;
-
+  html+='<div class="calendar">';
   rows.forEach(r=>{
-    if(r[0].includes('Jan')){
-      const val = r[colIndex];
+    if(/Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec/.test(r[0])){
+      const val=r[colIndex]||'';
       let cls='absent';
       if(val.includes('PH')) cls='ph';
       else if(val.includes('WO')) cls='off';
       else if(parseInt(val)>0) cls='present';
-
-      html += `
-      <div class="day ${cls}">
-        <div>${r[0]}</div>
-        <div>${val}</div>
-      </div>`;
+      html+=`<div class="day ${cls}"><div>${r[0]}</div><div>${val}</div></div>`;
     }
   });
+  html+='</div>';
 
-  html += `</div>`;
-
-  // SUMMARY
-  html += `
-  <div class="card" style="margin-top:1rem">
-    <h4>Attendance Summary</h4>
-    <table style="width:100%;font-size:.85rem;border-collapse:collapse">`;
-
-  const summaryRows = [
-    'Present Days','Public Holiday','Casual Leave','Earned Leave',
-    'Weekoffs','LOP/Absent Days','Final Present Days','OT Hours'
-  ];
-
+  const summaryRows=['Present Days','Public Holiday','Casual Leave','Earned Leave','Weekoffs','LOP/Absent Days','Final Present Days','OT Hours'];
+  html+='<div class="card" style="margin-top:1rem">';
+  html+='<h4>Attendance Summary</h4><table>';
   summaryRows.forEach(label=>{
-    const row = rows.find(r=>r[0]===label);
-    if(row){
-      html += `
-      <tr>
-        <td style="padding:.4rem;border-bottom:1px solid #e5e7eb">${label}</td>
-        <td style="padding:.4rem;border-bottom:1px solid #e5e7eb;text-align:right">${row[colIndex]}</td>
-      </tr>`;
-    }
+    const row=rows.find(r=>r[0]===label);
+    if(row){html+=`<tr><td>${label}</td><td style="text-align:right">${row[colIndex]}</td></tr>`;}
   });
+  html+='</table>';
+  html+='<button id="downloadBtn" style="margin-top:.7rem;width:100%" onclick="downloadCard()">Download Attendance Card</button>';
+  html+='</div></div>';
 
-  html += `
-    </table>
-    <button id="downloadBtn" onclick="downloadJPEG()" style="margin-top:.7rem;width:100%">
-      Download Attendance Card (JPEG)
-    </button>
-  </div>
-</div>`;
-
-  document.getElementById('attendanceCard').innerHTML = html;
+  document.getElementById('result').innerHTML=html;
 }
 
-// HD JPEG DOWNLOAD
-function downloadJPEG(){
-  const btn = document.getElementById('downloadBtn');
-  if(!btn || btn.disabled) return;
-
-  btn.disabled = true;
-  btn.innerText = 'Generating Image...';
-
-  const card = document.getElementById('attendanceCard');
-
-  html2canvas(card, {
-    scale: 2,          // HD resolution
-    backgroundColor: '#ffffff'
-  }).then(canvas=>{
-    const link = document.createElement('a');
-    link.download = 'Attendance_Card.jpg';
-    link.href = canvas.toDataURL('image/jpeg', 0.95);
+function downloadCard(){
+  const btn=document.getElementById('downloadBtn');
+  btn.disabled=true;
+  const card=document.getElementById('attendanceCard');
+  html2canvas(card,{scale:3,useCORS:true}).then(canvas=>{
+    const link=document.createElement('a');
+    link.download='Attendance_Card_HD.jpg';
+    link.href=canvas.toDataURL('image/jpeg',1.0);
     link.click();
-
-    btn.innerText = 'Downloaded';
+    btn.disabled=false;
   });
 }
 </script>

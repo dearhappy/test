@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Worker Attendance Portal</title>
 
+  <!-- html2canvas for HD JPEG download -->
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+
   <style>
     :root{
       --primary:#1f2937;
@@ -23,7 +26,7 @@
     .search-box{display:flex;gap:.5rem;margin-bottom:1rem}
     input{flex:1;padding:.7rem;border-radius:.5rem;border:1px solid #d1d5db}
     button{padding:.7rem 1rem;border:none;border-radius:.5rem;background:var(--accent);color:#fff;font-weight:600}
-    button:disabled{cursor:not-allowed}
+    button:disabled{opacity:.6;cursor:not-allowed}
     .card{background:var(--card);border-radius:1rem;padding:1rem;box-shadow:0 8px 20px rgba(0,0,0,.06)}
     .info{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:1rem}
     .calendar{display:grid;grid-template-columns:repeat(7,1fr);gap:.5rem}
@@ -45,7 +48,8 @@
     <button onclick="loadAttendance()">Search</button>
   </div>
 
-  <div id="result"></div>
+  <!-- This wrapper is important for JPEG capture -->
+  <div id="attendanceCard"></div>
 </div>
 
 <script>
@@ -76,88 +80,92 @@ async function loadAttendance(){
   }
 
   if(colIndex === -1){
-    document.getElementById('result').innerHTML = '<p>No record found</p>';
+    document.getElementById('attendanceCard').innerHTML = '<p>No record found</p>';
     return;
   }
 
-  let html = `<div class="card">
+  let html = `
+  <div class="card" id="cardContent">
     <div class="info">
       <div><strong>Name:</strong> ${nameRow[colIndex]}</div>
       <div><strong>Employee ID:</strong> ${empIdRow[colIndex]}</div>
       <div><strong>Designation:</strong> ${desigRow[colIndex]}</div>
     </div>
+
     <div class="calendar">`;
 
   rows.forEach(r=>{
     if(r[0].includes('Jan')){
       const val = r[colIndex];
-      let cls = 'absent';
+      let cls='absent';
       if(val.includes('PH')) cls='ph';
       else if(val.includes('WO')) cls='off';
       else if(parseInt(val)>0) cls='present';
 
-      html += `<div class="day ${cls}">
+      html += `
+      <div class="day ${cls}">
         <div>${r[0]}</div>
         <div>${val}</div>
       </div>`;
     }
   });
 
-  html += '</div></div>';
+  html += `</div>`;
 
-  // SUMMARY TABLE
-  let summaryHtml = `
+  // SUMMARY
+  html += `
   <div class="card" style="margin-top:1rem">
     <h4>Attendance Summary</h4>
     <table style="width:100%;font-size:.85rem;border-collapse:collapse">`;
 
   const summaryRows = [
-    'Present Days',
-    'Public Holiday',
-    'Casual Leave',
-    'Earned Leave',
-    'Weekoffs',
-    'LOP/Absent Days',
-    'Final Present Days',
-    'OT Hours'
+    'Present Days','Public Holiday','Casual Leave','Earned Leave',
+    'Weekoffs','LOP/Absent Days','Final Present Days','OT Hours'
   ];
 
   summaryRows.forEach(label=>{
     const row = rows.find(r=>r[0]===label);
     if(row){
-      summaryHtml += `
+      html += `
       <tr>
         <td style="padding:.4rem;border-bottom:1px solid #e5e7eb">${label}</td>
-        <td style="padding:.4rem;border-bottom:1px solid #e5e7eb;text-align:right">
-          ${row[colIndex]}
-        </td>
+        <td style="padding:.4rem;border-bottom:1px solid #e5e7eb;text-align:right">${row[colIndex]}</td>
       </tr>`;
     }
   });
 
-  summaryHtml += `
+  html += `
     </table>
-    <button id="downloadBtn" onclick="downloadCard()" style="margin-top:.7rem;width:100%">
-      Download Attendance Card
+    <button id="downloadBtn" onclick="downloadJPEG()" style="margin-top:.7rem;width:100%">
+      Download Attendance Card (JPEG)
     </button>
-  </div>`;
+  </div>
+</div>`;
 
-  document.getElementById('result').innerHTML = html + summaryHtml;
+  document.getElementById('attendanceCard').innerHTML = html;
 }
 
-// DOWNLOAD FUNCTION (FIXED)
-function downloadCard(){
+// HD JPEG DOWNLOAD
+function downloadJPEG(){
   const btn = document.getElementById('downloadBtn');
   if(!btn || btn.disabled) return;
 
   btn.disabled = true;
-  btn.style.opacity = '0.7';
-  btn.innerText = 'Preparing Download...';
+  btn.innerText = 'Generating Image...';
 
-  setTimeout(() => {
-    window.print();   // Reliable PDF download
+  const card = document.getElementById('attendanceCard');
+
+  html2canvas(card, {
+    scale: 2,          // HD resolution
+    backgroundColor: '#ffffff'
+  }).then(canvas=>{
+    const link = document.createElement('a');
+    link.download = 'Attendance_Card.jpg';
+    link.href = canvas.toDataURL('image/jpeg', 0.95);
+    link.click();
+
     btn.innerText = 'Downloaded';
-  }, 300);
+  });
 }
 </script>
 </body>

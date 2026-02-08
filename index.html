@@ -32,8 +32,8 @@
             <h1 class="text-3xl font-bold text-blue-600 mb-2 text-center">Supervisor App</h1>
             <p class="text-gray-500 text-center mb-8">Secure Login</p>
             <div class="space-y-4">
-                <div><label class="block text-sm font-medium text-gray-700">Username</label><select id="login-user" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm border p-3 focus:border-blue-500 bg-white"><option value="">Loading...</option></select></div>
-                <div><label class="block text-sm font-medium text-gray-700">Passcode</label><input type="password" id="login-pass" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm border p-3 focus:border-blue-500" placeholder="••••"></div>
+                <div><label class="block text-sm font-medium text-gray-700">Username</label><select id="login-user" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm border p-3 focus:border-blue-500 focus:ring-blue-500 bg-white"><option value="">Loading...</option></select></div>
+                <div><label class="block text-sm font-medium text-gray-700">Passcode</label><input type="password" id="login-pass" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm border p-3 focus:border-blue-500 focus:ring-blue-500" placeholder="••••"></div>
                 <button onclick="handleLogin()" id="btn-login" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none">Sign In</button>
                 <p id="login-error" class="text-red-500 text-center text-sm hidden">Invalid credentials</p>
                 <p id="loading-msg" class="text-gray-400 text-center text-sm hidden">Connecting...</p>
@@ -69,7 +69,7 @@
                     <button onclick="submitCheckIn()" id="btn-ci-submit" class="w-full bg-green-600 text-white py-3 rounded-md font-semibold shadow hover:bg-green-700 transition">Submit Check-In</button>
                 </div>
                 
-                <!-- NEW: Submitted Workers List for Deletion -->
+                <!-- NEW: Submitted Workers List -->
                 <div class="bg-white p-4 rounded-lg shadow">
                     <h3 class="text-sm font-bold text-gray-500 uppercase tracking-wide mb-2">Submitted Workers (Select Date above)</h3>
                     <div id="submitted-workers-list" class="space-y-2">
@@ -271,14 +271,14 @@
             try {
                 await apiRequest('submitCheckIn', payload, 'POST');
                 btn.innerText = 'Submit Check-In'; btn.disabled = false;
-                loadCheckInData(); // Refresh list to show delete buttons
+                loadCheckInData(); // Refresh List
                 const summary = `*Date:* ${date}\n*Supervisor:* ${currentUser}\n*Team:*\n` + selectedWorkers.map(w => `- ${w.name} (${w.designation})`).join('\n');
                 const ta = document.createElement('textarea'); ta.value = summary; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
                 if(confirm("Saved! Summary copied. Open WhatsApp?")) { window.open(`https://wa.me/?text=${encodeURIComponent(summary)}`, '_blank'); }
             } catch(e) { alert("Submission Failed."); btn.innerText = 'Submit Check-In'; btn.disabled = false; }
         }
 
-        // --- NEW: Load Submitted Workers for Deletion ---
+        // NEW: Load CheckIn Data for Deletion
         async function loadCheckInData() {
             const date = document.getElementById('ci-date').value;
             const list = document.getElementById('submitted-workers-list');
@@ -317,13 +317,13 @@
             } catch(e) { console.error(e); }
         }
 
-        // --- NEW: Delete Logic ---
+        // --- ROBUST DELETE ---
         async function deleteRow(sheetName, rowIndex) {
             if(!confirm("Are you sure you want to delete this entry?")) return;
             try {
                 const res = await apiRequest('deleteEntry', { sheetName, rowIndex, supervisor: currentUser }, 'POST');
                 if(res.success) {
-                    // Refresh current view
+                    // Mandatory Refresh to update Row Indexes
                     if(sheetName === 'CheckIn') loadCheckInData();
                     else handleCheckOutDateChange();
                 } else {
@@ -343,10 +343,8 @@
             if(entries.length === 0) { list.innerHTML = '<div class="text-center text-gray-400 py-8 text-sm">No entries added.</div>'; btn.classList.add('hidden'); return; }
             btn.classList.remove('hidden');
             list.innerHTML = entries.map((e, i) => {
-                // Check if saved entry (has rowIndex) or new entry
                 const deleteAction = e.rowIndex ? `deleteRow('CheckOut', ${e.rowIndex})` : `removeUnsavedEntry(${i})`;
                 const statusClass = e.rowIndex ? "border-green-200 bg-green-50" : "border-blue-100 bg-blue-50";
-                
                 return `
                 <div class="${statusClass} border p-3 rounded text-sm relative">
                     <button onclick="${deleteAction}" class="absolute top-2 right-2 text-red-400 font-bold hover:text-red-600"><i class="fas fa-trash"></i></button>
@@ -383,7 +381,6 @@
         }
 
         function saveEntry() {
-            // New entry: No rowIndex property
             entries.push({
                 date: document.getElementById('co-date').value,
                 area: document.getElementById('co-area').value,

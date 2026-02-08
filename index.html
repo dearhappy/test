@@ -1,107 +1,501 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Salary Slip Generator</title>
-
-<style>
-body { font-family: Arial; background:#f2f2f2; padding:10px; }
-.card { background:#fff; padding:15px; border-radius:10px; }
-input, select, button {
-  width:100%; padding:10px; margin:6px 0;
-}
-button {
-  background:#0a7cff; color:#fff; border:none; font-size:16px;
-}
-.result { margin-top:10px; font-weight:bold; }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Supervisor App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        body { background-color: #f3f4f6; -webkit-tap-highlight-color: transparent; }
+        .spinner { border-top-color: #3b82f6; -webkit-animation: spinner 1.5s linear infinite; animation: spinner 1.5s linear infinite; }
+        @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        #hidden-report-container { position: absolute; left: -9999px; top: 0; width: 1123px; background: white; padding: 40px; font-family: 'Arial', sans-serif; color: black; z-index: -1; box-sizing: border-box; }
+        .rpt-header { display: flex; justify-content: space-between; margin-bottom: 20px; font-weight: bold; font-size: 14px; }
+        .rpt-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; table-layout: fixed; }
+        .rpt-table th, .rpt-table td { border: 1px solid #000; padding: 6px; text-align: center; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .rpt-table th { background-color: #eee; font-weight: bold; text-transform: uppercase; }
+        .wrap-cell { white-space: normal !important; word-wrap: break-word; line-height: 1.2; }
+        h2 { text-align: center; font-size: 28px; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px; }
+        .section-title { font-weight: bold; font-size: 18px; margin-top: 20px; margin-bottom: 10px; text-decoration: underline; }
+    </style>
 </head>
+<body class="text-gray-800 h-screen flex flex-col overflow-hidden">
 
-<body>
-<div class="card">
-<h3>Salary Slip Generator</h3>
+    <!-- 1. LOGIN -->
+    <div id="login-screen" class="fixed inset-0 z-50 bg-white flex flex-col justify-center items-center p-6">
+        <div class="w-full max-w-sm">
+            <h1 class="text-3xl font-bold text-blue-600 mb-2 text-center">Supervisor App</h1>
+            <p class="text-gray-500 text-center mb-8">Secure Login</p>
+            <div class="space-y-4">
+                <div><label class="block text-sm font-medium text-gray-700">Username</label><select id="login-user" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm border p-3 focus:border-blue-500 bg-white"><option value="">Loading...</option></select></div>
+                <div><label class="block text-sm font-medium text-gray-700">Passcode</label><input type="password" id="login-pass" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm border p-3 focus:border-blue-500" placeholder="••••"></div>
+                <button onclick="handleLogin()" id="btn-login" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none">Sign In</button>
+                <p id="login-error" class="text-red-500 text-center text-sm hidden">Invalid credentials</p>
+                <p id="loading-msg" class="text-gray-400 text-center text-sm hidden">Connecting...</p>
+            </div>
+        </div>
+    </div>
 
-<input id="name" placeholder="Worker Name">
+    <!-- MAIN APP -->
+    <div id="app-content" class="flex-1 flex flex-col hidden h-full">
+        <header class="bg-blue-600 text-white p-4 shadow-md flex justify-between items-center shrink-0">
+            <div><h1 class="text-lg font-bold">Welcome, <span id="display-name">Supervisor</span></h1><p class="text-xs opacity-80" id="header-date">Loading...</p></div>
+            <button onclick="logout()" class="text-white hover:text-blue-200"><i class="fas fa-sign-out-alt fa-lg"></i></button>
+        </header>
+        <div class="bg-white border-b flex shrink-0">
+            <button onclick="switchTab('checkin')" id="tab-checkin" class="flex-1 py-3 text-center border-b-2 border-blue-600 text-blue-600 font-medium">Check-In</button>
+            <button onclick="switchTab('checkout')" id="tab-checkout" class="flex-1 py-3 text-center border-b-2 border-transparent text-gray-500 font-medium">Check-Out</button>
+        </div>
+        <div class="flex-1 overflow-y-auto bg-gray-50 p-4 relative" id="main-scroll">
+            
+            <!-- CHECK-IN -->
+            <div id="view-checkin" class="space-y-4 max-w-lg mx-auto pb-20">
+                <div class="bg-white p-4 rounded-lg shadow space-y-4">
+                    <h2 class="text-lg font-semibold text-gray-700 border-b pb-2">Daily Check-In</h2>
+                    <div><label class="block text-sm font-medium text-gray-600">Date</label><input type="date" id="ci-date" class="w-full mt-1 p-2 border rounded-md" onchange="loadCheckInData()"></div>
+                    <div><label class="block text-sm font-medium text-gray-600">Area</label><select id="ci-area" class="w-full mt-1 p-2 border rounded-md bg-white"><option value="">Select Area</option></select></div>
+                    <div><label class="block text-sm font-medium text-gray-600">Department</label><select id="ci-dept" class="w-full mt-1 p-2 border rounded-md bg-white"><option value="">Select Department</option></select></div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Select Workers</label>
+                        <input type="text" id="worker-search" placeholder="Search..." class="w-full p-2 border rounded-t-md text-sm mb-0" onkeyup="filterWorkers()">
+                        <div id="worker-list" class="h-48 overflow-y-auto border border-t-0 rounded-b-md bg-white p-2 space-y-1"><div class="text-center text-gray-400 text-sm mt-4">Loading workers...</div></div>
+                        <div class="text-right text-xs text-gray-500 mt-1">Selected: <span id="selected-count" class="font-bold">0</span></div>
+                    </div>
+                    <button onclick="submitCheckIn()" id="btn-ci-submit" class="w-full bg-green-600 text-white py-3 rounded-md font-semibold shadow hover:bg-green-700 transition">Submit Check-In</button>
+                </div>
+                
+                <!-- NEW: Submitted Workers List for Deletion -->
+                <div class="bg-white p-4 rounded-lg shadow">
+                    <h3 class="text-sm font-bold text-gray-500 uppercase tracking-wide mb-2">Submitted Workers (Select Date above)</h3>
+                    <div id="submitted-workers-list" class="space-y-2">
+                        <div class="text-center text-gray-400 py-2 text-xs">No workers submitted for this date.</div>
+                    </div>
+                </div>
+            </div>
 
-<select id="designation"></select>
+            <!-- CHECK-OUT -->
+            <div id="view-checkout" class="hidden space-y-4 max-w-lg mx-auto pb-24">
+                <div class="bg-white p-4 rounded-lg shadow flex items-center justify-between">
+                    <label class="text-sm font-bold text-gray-600">Report Date:</label>
+                    <input type="date" id="co-date-display" class="border rounded p-1 text-sm font-semibold" onchange="handleCheckOutDateChange()">
+                </div>
+                <div class="bg-white p-4 rounded-lg shadow">
+                    <div class="flex justify-between items-center mb-4 border-b pb-2">
+                        <h2 class="text-lg font-semibold text-gray-700">Work Logs</h2>
+                        <button onclick="openEntryModal()" class="bg-blue-600 text-white px-3 py-1 rounded text-sm shadow hover:bg-blue-700"><i class="fas fa-plus mr-1"></i> Add</button>
+                    </div>
+                    <div id="entry-list" class="space-y-3"><div class="text-center text-gray-400 py-8 text-sm">Loading logs...</div></div>
+                </div>
+                <div class="bg-white p-4 rounded-lg shadow opacity-90">
+                    <h3 class="text-sm font-bold text-gray-500 uppercase tracking-wide mb-2">Manpower Reference</h3>
+                    <div id="ref-worker-list" class="text-sm text-gray-600 space-y-1 pl-2 border-l-4 border-blue-200"><p class="italic text-gray-400">Select date to load.</p></div>
+                </div>
+                <input type="hidden" id="fetched-dept" value="">
+                <button onclick="submitCheckOut()" id="btn-co-final" class="w-full bg-indigo-600 text-white py-3 rounded-md font-semibold shadow hover:bg-indigo-700 transition hidden">Finalize & Generate Report</button>
+            </div>
+        </div>
+    </div>
 
-<input type="number" id="wd" placeholder="Working Days">
-<input type="number" id="ot" placeholder="OT Hours">
-<input type="number" id="sun" placeholder="Sundays (Not Paid)">
-<input type="number" id="nh" placeholder="National Holidays">
-<input type="number" id="el" placeholder="EL">
-<input type="number" id="cl" placeholder="CL">
-<input type="number" id="adv" placeholder="Advance">
+    <!-- ENTRY MODAL -->
+    <div id="entry-modal" class="fixed inset-0 z-40 bg-black bg-opacity-50 hidden flex items-end sm:items-center justify-center">
+        <div class="bg-white w-full max-w-lg rounded-t-xl sm:rounded-xl p-4 max-h-[90vh] overflow-y-auto no-scrollbar flex flex-col">
+            <div class="flex justify-between items-center mb-4"><h3 class="text-lg font-bold">Add Work Entry</h3><button onclick="closeEntryModal()" class="text-gray-500 text-2xl">&times;</button></div>
+            <div class="space-y-3 pb-4">
+                <div class="grid grid-cols-2 gap-2"><div><label class="text-xs font-bold text-gray-500">Date</label><input type="date" id="co-date" class="w-full border rounded p-2 text-sm bg-gray-100" readonly></div><div><label class="text-xs font-bold text-gray-500">Area</label><select id="co-area" class="w-full border rounded p-2 text-sm bg-white"></select></div></div>
+                <div class="grid grid-cols-2 gap-2"><div><label class="text-xs font-bold text-gray-500">Department</label><input type="text" id="co-dept" class="w-full border rounded p-2 text-sm bg-gray-100" readonly placeholder="Auto"></div><div><label class="text-xs font-bold text-gray-500">Tag No</label><input type="text" id="co-tag" class="w-full border rounded p-2 text-sm" placeholder="e.g. T-101"></div></div>
+                <div><label class="text-xs font-bold text-gray-500">Job Type</label><select id="co-job" class="w-full border rounded p-2 text-sm bg-white"><option>Erection</option><option>Dismantling</option><option>Materials Shifting</option><option>Unloading</option></select></div>
+                <div><label class="text-xs font-bold text-gray-500">Work Location</label><input type="text" id="co-location" class="w-full border rounded p-2 text-sm" placeholder="Tank 4"></div>
+                <div class="grid grid-cols-2 gap-2"><div><label class="text-xs font-bold text-gray-500">Scaffold Type</label><select id="co-scaf-type" class="w-full border rounded p-2 text-sm bg-white"><option>Normal</option><option>Suspended</option><option>Designed</option></select></div><div><label class="text-xs font-bold text-gray-500">Elevation</label><select id="co-elev" class="w-full border rounded p-2 text-sm bg-white"><option>0-10</option><option>10-20</option><option>20-30</option><option>30-40</option><option>40-50</option><option>0-45</option></select></div></div>
+                <div class="grid grid-cols-2 gap-2"><div><label class="text-xs font-bold text-gray-500">Scaffolders</label><input type="number" id="co-scaf-count" class="w-full border rounded p-2 text-sm bg-gray-50" readonly></div><div><label class="text-xs font-bold text-gray-500">Helpers</label><input type="number" id="co-help-count" class="w-full border rounded p-2 text-sm bg-gray-50" readonly></div></div>
+                <div><label class="text-xs font-bold text-gray-500">AMNS Eng Name</label><input type="text" id="co-eng" class="w-full border rounded p-2 text-sm"></div>
+                <div class="grid grid-cols-2 gap-2"><div><label class="text-xs font-bold text-gray-500">Start Time</label><input type="time" id="co-start" class="w-full border rounded p-2 text-sm"></div><div><label class="text-xs font-bold text-gray-500">End Time</label><input type="time" id="co-end" class="w-full border rounded p-2 text-sm"></div></div>
+                <div class="bg-gray-50 p-2 rounded border">
+                    <div class="grid grid-cols-4 gap-2 mb-2"><div><label class="text-[10px] font-bold text-center block">L</label><input type="number" id="co-l" class="w-full border p-1 text-sm text-center vol-calc" placeholder="0"></div><div><label class="text-[10px] font-bold text-center block">W</label><input type="number" id="co-w" class="w-full border p-1 text-sm text-center vol-calc" placeholder="0"></div><div><label class="text-[10px] font-bold text-center block">H</label><input type="number" id="co-h" class="w-full border p-1 text-sm text-center vol-calc" placeholder="0"></div><div><label class="text-[10px] font-bold text-center block">Nos</label><input type="number" id="co-nos" class="w-full border p-1 text-sm text-center vol-calc" placeholder="1"></div></div>
+                    <div class="text-right text-sm font-bold text-blue-600">Vol: <span id="co-vol">0.00</span> CuM</div>
+                </div>
+            </div>
+            <div class="mt-2"><button onclick="saveEntry()" class="w-full bg-blue-600 text-white py-3 rounded font-bold shadow">Save Entry</button></div>
+        </div>
+    </div>
 
-<button onclick="calculate()">Generate Salary</button>
+    <!-- REPORT MODAL -->
+    <div id="report-modal" class="fixed inset-0 z-50 bg-black bg-opacity-90 hidden flex flex-col justify-center items-center p-4">
+        <div class="bg-white rounded-lg p-4 w-full max-w-md text-center space-y-4">
+            <div id="report-spinner" class="py-10"><div class="spinner ease-linear rounded-full border-4 border-t-4 border-gray-200 h-12 w-12 mb-4 mx-auto"></div><h2 class="text-xl font-semibold">Generating Report...</h2></div>
+            <div id="report-actions" class="hidden space-y-4">
+                <i class="fas fa-check-circle text-5xl text-green-500"></i><h2 class="text-xl font-bold">Success!</h2>
+                <div class="grid grid-cols-1 gap-3"><a id="wa-share-btn" href="#" class="block w-full bg-green-500 text-white py-3 rounded font-bold shadow hover:bg-green-600">Share via WhatsApp</a><a id="pdf-dl-btn" href="#" download="report.pdf" class="block w-full bg-gray-600 text-white py-2 rounded font-medium text-sm">Download PDF</a></div>
+                <button onclick="resetApp()" class="text-gray-500 underline text-sm mt-4">Close & Return to Login</button>
+            </div>
+        </div>
+    </div>
 
-<div class="result" id="out"></div>
-</div>
+    <!-- HIDDEN JPG -->
+    <div id="hidden-report-container">
+        <h2>Daily Work Report</h2>
+        <div class="rpt-header">
+            <div><div>Date: <span id="rpt-date"></span></div><div>Department: <span id="rpt-dept"></span></div></div>
+            <div style="text-align:right;"><div>Supervisor: <span id="rpt-sup-top"></span></div><div>Engineer: <span id="rpt-eng-top"></span></div></div>
+        </div>
+        <div class="section-title">Work Logs</div>
+        <table class="rpt-table" id="rpt-job-table">
+            <colgroup><col style="width: 4%;"><col style="width: 8%;"><col style="width: 8%;"><col style="width: 8%;"><col style="width: 8%;"><col style="width: 20%;"><col style="width: 8%;"><col style="width: 6%;"><col style="width: 6%;"><col style="width: 5%;"><col style="width: 5%;"><col style="width: 5%;"><col style="width: 4%;"><col style="width: 5%;"></colgroup>
+            <thead><tr><th>SL No</th><th>Date</th><th>Area</th><th>Job Type</th><th>Tag No.</th><th>Work Location</th><th>Scaffolding Type</th><th>Elevation</th><th>Duration</th><th>L</th><th>W</th><th>H</th><th>NOS</th><th>Volume</th></tr></thead>
+            <tbody></tbody>
+        </table>
+        <div class="section-title">Manpower Reference</div>
+        <table class="rpt-table" id="rpt-manpower-table" style="width: 70%;">
+            <colgroup><col style="width: 10%;"><col style="width: 35%;"><col style="width: 20%;"><col style="width: 25%;"><col style="width: 10%;"></colgroup>
+            <thead><tr><th>SL NO.</th><th>NAME</th><th>EmpCode</th><th>Designation</th><th>Overtime</th></tr></thead>
+            <tbody></tbody>
+        </table>
+        <p id="rpt-totals" style="font-weight:bold; font-size:14px;"></p>
+        <br/><br/><br/>
+        <table style="border:none; width:100%;">
+            <tr style="border:none;"><td style="border:none; text-align:left; vertical-align:bottom; height:60px;">_________________________<br/><span id="rpt-sign-sup"></span><br/>(Supervisor)</td><td style="border:none; text-align:right; vertical-align:bottom; height:60px;">_________________________<br/><span id="rpt-sign-eng"></span><br/>(AMNS ENGINEER NAME SIGN)</td></tr>
+        </table>
+    </div>
 
-<script>
-const WEB_APP_URL =
-"https://script.google.com/macros/s/AKfycbxQsIW3F21Xi6Tcgaygl4yOeexQuMciq6r1UWGV3VgO4dev-xwwDvR2Fb4d2SgCE5979A/exec";
+    <script>
+        const API_URL = "https://script.google.com/macros/s/AKfycbzPiM6vrKixKOpcmbwyguMavLhyxnK-jP5wPN1EFswnJOLar6mwkGJ8KMRMAZe86keQ/exec";
 
-let payroll = {};
+        async function apiRequest(action, data = {}, method = 'GET') {
+            let url = `${API_URL}?action=${action}`;
+            let options = { method: method };
+            if (method === 'POST') {
+                const payload = { ...data, action: action };
+                options.body = JSON.stringify(payload);
+            } else {
+                const params = new URLSearchParams(data).toString();
+                if(params) url += `&${params}`;
+            }
+            const response = await fetch(url, options);
+            if (!response.ok) throw new Error('Network response was not ok');
+            return response.json();
+        }
 
-// Load Designations
-fetch(WEB_APP_URL + "?action=getDesignations")
-  .then(r => r.json())
-  .then(list => {
-    const d = document.getElementById("designation");
-    d.innerHTML = "<option value=''>Select Designation</option>";
-    list.forEach(x => d.innerHTML += `<option>${x}</option>`);
-  });
+        let currentUser = null;
+        let masterData = { workers: [], areas: [], departments: [] };
+        let entries = []; 
+        let checkInWorkers = []; 
 
-// Load payroll on designation change
-document.getElementById("designation").addEventListener("change", function () {
-  fetch(WEB_APP_URL + "?action=getPayroll&designation=" + this.value)
-    .then(r => r.json())
-    .then(p => payroll = p);
-});
+        window.onload = function() {
+            document.getElementById('header-date').innerText = new Date().toDateString();
+            document.getElementById('ci-date').valueAsDate = new Date();
+            document.getElementById('co-date-display').valueAsDate = new Date();
+            const calcInputs = document.querySelectorAll('.vol-calc');
+            calcInputs.forEach(input => input.addEventListener('input', calculateVolume));
+            loadUsernames();
+        };
+        
+        async function loadUsernames() {
+            try {
+                const users = await apiRequest('getUsernames');
+                const select = document.getElementById('login-user');
+                select.innerHTML = '<option value="">Select Username</option>';
+                if (users.length === 0) { const opt = document.createElement('option'); opt.value = "admin"; opt.innerText = "admin (Default)"; select.appendChild(opt); } 
+                else { users.forEach(u => { const opt = document.createElement('option'); opt.value = u; opt.innerText = u; select.appendChild(opt); }); }
+            } catch (e) { console.error("Failed to load users", e); }
+        }
 
-function calculate() {
-  const wd = +v("wd");
-  const nh = +v("nh");
-  const el = +v("el");
-  const cl = +v("cl");
-  const ot = +v("ot");
-  const adv = +v("adv");
+        async function handleLogin() {
+            const u = document.getElementById('login-user').value;
+            const p = document.getElementById('login-pass').value;
+            const btn = document.getElementById('btn-login');
+            if(!u || !p) return;
+            btn.innerText = 'Verifying...'; btn.disabled = true; document.getElementById('loading-msg').classList.remove('hidden');
+            try {
+                const res = await apiRequest('login', { username: u, passcode: p }, 'POST');
+                if(res.success) {
+                    currentUser = res.name;
+                    document.getElementById('display-name').innerText = currentUser;
+                    document.getElementById('login-screen').classList.add('hidden');
+                    document.getElementById('app-content').classList.remove('hidden');
+                    loadMasterData();
+                } else { throw new Error('Invalid'); }
+            } catch (e) {
+                document.getElementById('login-error').classList.remove('hidden');
+                btn.innerText = 'Sign In'; btn.disabled = false;
+            }
+        }
 
-  const perDay = payroll.gross / 26;
+        function logout() { location.reload(); }
 
-  // ✅ FINAL APPROVED LOGIC
-  const earnedAmount = perDay * (wd + nh + el + cl);
+        async function loadMasterData() {
+            try {
+                const data = await apiRequest('getMasterData');
+                masterData = data;
+                const populate = (id, list) => {
+                    const el = document.getElementById(id);
+                    el.innerHTML = '<option value="">Select</option>';
+                    list.forEach(item => { const opt = document.createElement('option'); opt.value = item; opt.innerText = item; el.appendChild(opt); });
+                };
+                populate('ci-area', data.areas); populate('ci-dept', data.departments); populate('co-area', data.areas);
+                renderWorkerList(data.workers);
+            } catch (e) { alert("Failed to load Master Data."); }
+        }
 
-  const otAmount = ot * payroll.otRate;
-  const totalEarning = earnedAmount + otAmount;
-  const totalDeduction = payroll.pf + payroll.esi + payroll.pt + adv;
-  const netPay = Math.round(totalEarning - totalDeduction);
+        function renderWorkerList(list) {
+            const container = document.getElementById('worker-list');
+            container.innerHTML = '';
+            list.forEach((w, i) => {
+                const div = document.createElement('div');
+                div.className = 'flex items-center p-2 hover:bg-gray-100 rounded cursor-pointer worker-item';
+                div.innerHTML = `<input type="checkbox" id="w-${i}" class="mr-3 h-4 w-4 text-blue-600 worker-chk" value="${w.sl}" data-idx="${i}"><div><div class="font-medium text-sm text-gray-800">${w.name}</div><div class="text-xs text-gray-500">${w.designation} | ${w.empCode}</div></div>`;
+                div.onclick = (e) => { if (e.target.type !== 'checkbox') { const chk = div.querySelector('input'); chk.checked = !chk.checked; updateSelectedCount(); }};
+                container.appendChild(div);
+            });
+        }
+        function filterWorkers() {
+            const term = document.getElementById('worker-search').value.toLowerCase();
+            const items = document.querySelectorAll('.worker-item');
+            items.forEach(item => { item.style.display = item.innerText.toLowerCase().includes(term) ? 'flex' : 'none'; });
+        }
+        function updateSelectedCount() { document.getElementById('selected-count').innerText = document.querySelectorAll('.worker-chk:checked').length; }
 
-  document.getElementById("out").innerHTML =
-    "Net Pay : ₹ " + netPay;
+        async function submitCheckIn() {
+            const date = document.getElementById('ci-date').value;
+            const area = document.getElementById('ci-area').value;
+            const dept = document.getElementById('ci-dept').value;
+            const chks = document.querySelectorAll('.worker-chk:checked');
+            if(!date || !area || !dept || chks.length === 0) { alert("Please complete all fields."); return; }
+            const btn = document.getElementById('btn-ci-submit');
+            btn.innerText = 'Submitting...'; btn.disabled = true;
+            const selectedWorkers = Array.from(chks).map(c => masterData.workers[c.dataset.idx]);
+            const payload = { date, supervisor: currentUser, area, department: dept, workers: selectedWorkers };
+            try {
+                await apiRequest('submitCheckIn', payload, 'POST');
+                btn.innerText = 'Submit Check-In'; btn.disabled = false;
+                loadCheckInData(); // Refresh list to show delete buttons
+                const summary = `*Date:* ${date}\n*Supervisor:* ${currentUser}\n*Team:*\n` + selectedWorkers.map(w => `- ${w.name} (${w.designation})`).join('\n');
+                const ta = document.createElement('textarea'); ta.value = summary; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+                if(confirm("Saved! Summary copied. Open WhatsApp?")) { window.open(`https://wa.me/?text=${encodeURIComponent(summary)}`, '_blank'); }
+            } catch(e) { alert("Submission Failed."); btn.innerText = 'Submit Check-In'; btn.disabled = false; }
+        }
 
-  const params = new URLSearchParams({
-    action: "saveSalary",
-    name: v("name"),
-    designation: v("designation"),
-    wd, ot,
-    sun: v("sun"),
-    nh, el, cl,
-    gross: payroll.gross,
-    otAmount,
-    pf: payroll.pf,
-    esi: payroll.esi,
-    pt: payroll.pt,
-    netPay
-  });
+        // --- NEW: Load Submitted Workers for Deletion ---
+        async function loadCheckInData() {
+            const date = document.getElementById('ci-date').value;
+            const list = document.getElementById('submitted-workers-list');
+            list.innerHTML = '<p class="text-xs text-gray-400">Loading...</p>';
+            try {
+                const data = await apiRequest('getDailyData', { date, supervisor: currentUser });
+                if(data.checkIns.length === 0) {
+                    list.innerHTML = '<div class="text-center text-gray-400 py-2 text-xs">No workers submitted for this date.</div>';
+                } else {
+                    list.innerHTML = data.checkIns.map(w => `
+                        <div class="flex justify-between items-center bg-gray-50 p-2 rounded text-sm">
+                            <div>${w.name} <span class="text-xs text-gray-500">(${w.designation})</span></div>
+                            <button onclick="deleteRow('CheckIn', ${w.rowIndex})" class="text-red-500 hover:text-red-700"><i class="fas fa-trash"></i></button>
+                        </div>
+                    `).join('');
+                }
+            } catch(e) { console.error(e); }
+        }
 
-  fetch(WEB_APP_URL + "?" + params);
-}
+        async function handleCheckOutDateChange() {
+            const date = document.getElementById('co-date-display').value;
+            const refList = document.getElementById('ref-worker-list');
+            const entryList = document.getElementById('entry-list');
+            refList.innerHTML = '<p class="italic text-gray-400">Syncing data...</p>';
+            entryList.innerHTML = '<div class="text-center text-gray-400 py-8 text-sm">Syncing logs...</div>';
+            try {
+                const data = await apiRequest('getDailyData', { date, supervisor: currentUser });
+                checkInWorkers = data.checkIns;
+                document.getElementById('fetched-dept').value = data.department || "";
+                
+                if(checkInWorkers.length === 0) refList.innerHTML = '<p class="italic text-gray-400">No Check-Ins found for this date.</p>';
+                else refList.innerHTML = checkInWorkers.map(w => `<div class="flex justify-between"><span>${w.name}</span> <span class="text-xs bg-gray-200 px-1 rounded">${w.designation}</span></div>`).join('');
+                
+                entries = data.logs || [];
+                renderEntryList();
+            } catch(e) { console.error(e); }
+        }
 
-function v(id) {
-  return document.getElementById(id).value;
-}
-</script>
+        // --- NEW: Delete Logic ---
+        async function deleteRow(sheetName, rowIndex) {
+            if(!confirm("Are you sure you want to delete this entry?")) return;
+            try {
+                const res = await apiRequest('deleteEntry', { sheetName, rowIndex, supervisor: currentUser }, 'POST');
+                if(res.success) {
+                    // Refresh current view
+                    if(sheetName === 'CheckIn') loadCheckInData();
+                    else handleCheckOutDateChange();
+                } else {
+                    alert("Delete failed: " + (res.error || "Unknown error"));
+                }
+            } catch(e) { alert("Connection failed."); }
+        }
+        
+        function removeUnsavedEntry(idx) {
+            entries.splice(idx, 1);
+            renderEntryList();
+        }
+
+        function renderEntryList() {
+            const list = document.getElementById('entry-list');
+            const btn = document.getElementById('btn-co-final');
+            if(entries.length === 0) { list.innerHTML = '<div class="text-center text-gray-400 py-8 text-sm">No entries added.</div>'; btn.classList.add('hidden'); return; }
+            btn.classList.remove('hidden');
+            list.innerHTML = entries.map((e, i) => {
+                // Check if saved entry (has rowIndex) or new entry
+                const deleteAction = e.rowIndex ? `deleteRow('CheckOut', ${e.rowIndex})` : `removeUnsavedEntry(${i})`;
+                const statusClass = e.rowIndex ? "border-green-200 bg-green-50" : "border-blue-100 bg-blue-50";
+                
+                return `
+                <div class="${statusClass} border p-3 rounded text-sm relative">
+                    <button onclick="${deleteAction}" class="absolute top-2 right-2 text-red-400 font-bold hover:text-red-600"><i class="fas fa-trash"></i></button>
+                    <div class="font-bold text-gray-800">${e.jobType} @ ${e.workLocation}</div>
+                    <div class="grid grid-cols-2 gap-x-4 mt-1 text-gray-600 text-xs">
+                        <div>Tag: ${e.tagNo || '-'}</div><div>Vol: ${e.vol}m³</div>
+                        <div>Dept: ${e.department || '-'}</div><div>Elev: ${e.elevation}</div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function openEntryModal() {
+            document.getElementById('co-date').value = document.getElementById('co-date-display').value;
+            document.getElementById('co-dept').value = document.getElementById('fetched-dept').value;
+            let scafCount = 0, helpCount = 0;
+            checkInWorkers.forEach(w => {
+                const des = (w.designation || "").toLowerCase();
+                if (des.includes("scaffolder")) scafCount++;
+                if (des.includes("helper")) helpCount++;
+            });
+            document.getElementById('co-scaf-count').value = scafCount;
+            document.getElementById('co-help-count').value = helpCount;
+            document.getElementById('entry-modal').classList.remove('hidden');
+        }
+
+        function closeEntryModal() { document.getElementById('entry-modal').classList.add('hidden'); }
+        function calculateVolume() {
+            const l = parseFloat(document.getElementById('co-l').value) || 0;
+            const w = parseFloat(document.getElementById('co-w').value) || 0;
+            const h = parseFloat(document.getElementById('co-h').value) || 0;
+            const nos = parseFloat(document.getElementById('co-nos').value) || 0;
+            document.getElementById('co-vol').innerText = (l * w * h * nos).toFixed(2);
+        }
+
+        function saveEntry() {
+            // New entry: No rowIndex property
+            entries.push({
+                date: document.getElementById('co-date').value,
+                area: document.getElementById('co-area').value,
+                department: document.getElementById('co-dept').value,
+                tagNo: document.getElementById('co-tag').value,
+                jobType: document.getElementById('co-job').value,
+                workLocation: document.getElementById('co-location').value,
+                scaffoldType: document.getElementById('co-scaf-type').value,
+                elevation: document.getElementById('co-elev').value,
+                scaffolders: document.getElementById('co-scaf-count').value,
+                helpers: document.getElementById('co-help-count').value,
+                amnsEngName: document.getElementById('co-eng').value,
+                startTime: document.getElementById('co-start').value,
+                endTime: document.getElementById('co-end').value,
+                l: document.getElementById('co-l').value,
+                w: document.getElementById('co-w').value,
+                h: document.getElementById('co-h').value,
+                nos: document.getElementById('co-nos').value,
+                vol: document.getElementById('co-vol').innerText
+            });
+            renderEntryList();
+            closeEntryModal();
+        }
+
+        function switchTab(tab) {
+            document.getElementById('view-checkin').classList.add('hidden');
+            document.getElementById('view-checkout').classList.add('hidden');
+            document.getElementById('tab-checkin').classList.replace('text-blue-600', 'text-gray-500');
+            document.getElementById('tab-checkin').classList.replace('border-blue-600', 'border-transparent');
+            document.getElementById('tab-checkout').classList.replace('text-blue-600', 'text-gray-500');
+            document.getElementById('tab-checkout').classList.replace('border-blue-600', 'border-transparent');
+            if(tab === 'checkin') {
+                document.getElementById('view-checkin').classList.remove('hidden');
+                document.getElementById('tab-checkin').classList.add('text-blue-600', 'border-blue-600');
+                document.getElementById('tab-checkin').classList.remove('text-gray-500', 'border-transparent');
+                loadCheckInData();
+            } else {
+                document.getElementById('view-checkout').classList.remove('hidden');
+                document.getElementById('tab-checkout').classList.add('text-blue-600', 'border-blue-600');
+                document.getElementById('tab-checkout').classList.remove('text-gray-500', 'border-transparent');
+                handleCheckOutDateChange();
+            }
+        }
+
+        async function submitCheckOut() {
+            if(entries.length === 0) return;
+            document.getElementById('report-modal').classList.remove('hidden');
+            document.getElementById('report-spinner').classList.remove('hidden');
+            document.getElementById('report-actions').classList.add('hidden');
+            const payload = { supervisor: currentUser, entries: entries };
+            try {
+                const res = await apiRequest('submitCheckOut', payload, 'POST');
+                if(res.success) {
+                    document.getElementById('report-spinner').classList.add('hidden');
+                    document.getElementById('report-actions').classList.remove('hidden');
+                    const link = document.getElementById('pdf-dl-btn');
+                    link.href = "data:application/pdf;base64," + res.reportUrl;
+                    renderHiddenReport(payload);
+                    html2canvas(document.getElementById('hidden-report-container'), { scale: 2 }).then(canvas => {
+                        const jpgUrl = canvas.toDataURL('image/jpeg', 0.9);
+                        const text = `*Daily Report*\nSupervisor: ${currentUser}\nEntries: ${entries.length}\n(Files Attached)`;
+                        document.getElementById('wa-share-btn').href = `https://wa.me/?text=${encodeURIComponent(text)}`;
+                        setTimeout(() => link.click(), 500);
+                        setTimeout(() => {
+                            const jpgLink = document.createElement('a');
+                            jpgLink.href = jpgUrl; jpgLink.download = `Report_${currentUser}_${Date.now()}.jpg`;
+                            document.body.appendChild(jpgLink); jpgLink.click(); document.body.removeChild(jpgLink);
+                        }, 1500);
+                    });
+                }
+            } catch(e) { alert("Report Generation Failed."); document.getElementById('report-modal').classList.add('hidden'); }
+        }
+        
+        function renderHiddenReport(payload) {
+            const first = payload.entries[0];
+            document.getElementById('rpt-date').innerText = first.date;
+            document.getElementById('rpt-sup-top').innerText = payload.supervisor;
+            document.getElementById('rpt-eng-top').innerText = first.amnsEngName;
+            document.getElementById('rpt-dept').innerText = first.department || '-';
+            
+            const jobBody = document.querySelector('#rpt-job-table tbody');
+            jobBody.innerHTML = '';
+            payload.entries.forEach((e, i) => {
+                let dur = "-";
+                if (e.startTime && e.endTime) {
+                    const s = new Date("2000-01-01 " + e.startTime);
+                    const end = new Date("2000-01-01 " + e.endTime);
+                    let diff = end - s; if(diff < 0) diff += 86400000;
+                    dur = (diff / 3600000).toFixed(1);
+                }
+                jobBody.insertAdjacentHTML('beforeend', `<tr>
+                    <td>${i+1}</td><td>${e.date}</td><td>${e.area}</td><td>${e.jobType}</td><td>${e.tagNo || '-'}</td><td class="wrap-cell">${e.workLocation}</td>
+                    <td>${e.scaffoldType}</td><td>${e.elevation}</td><td>${dur}</td>
+                    <td>${e.l}</td><td>${e.w}</td><td>${e.h}</td><td>${e.nos}</td><td>${e.vol}</td>
+                </tr>`);
+            });
+            
+            const manBody = document.querySelector('#rpt-manpower-table tbody');
+            manBody.innerHTML = '';
+            let scafCount = 0, helpCount = 0;
+            checkInWorkers.forEach((w, i) => {
+                const des = (w.designation || "").toLowerCase();
+                if(des.includes('scaffolder')) scafCount++;
+                if(des.includes('helper')) helpCount++;
+                manBody.insertAdjacentHTML('beforeend', `<tr><td>${i+1}</td><td>${w.name}</td><td>${w.empCode}</td><td>${w.designation}</td><td></td></tr>`);
+            });
+            document.getElementById('rpt-totals').innerText = `Totals (Attendance): Scaffolders: ${scafCount} | Helpers: ${helpCount} | Supervisor: 1`;
+            document.getElementById('rpt-sign-sup').innerText = payload.supervisor;
+            document.getElementById('rpt-sign-eng').innerText = first.amnsEngName;
+        }
+
+        function resetApp() { location.reload(); }
+    </script>
 </body>
 </html>
